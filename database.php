@@ -1,10 +1,10 @@
 <?php
 class Database
 {
-    private $host = 'sql106.infinityfree.com';
-    private $db_name = 'if0_39480944_scalcettingdb';
-    private $username = 'if0_39480944';
-    private $password = 'wWvpvGsRT7r';
+    private $host = '';
+    private $db_name = '';
+    private $username = '';
+    private $password = '';
     public $conn; // database connection
     private $isLocal = false;
 
