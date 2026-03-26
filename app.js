@@ -2914,8 +2914,6 @@ async function performEndSeason() {
 
 let livePollInterval = null;
 const LIVE_API_URL = 'live.php?api=1';
-const BRIDGE_URL = 'https://script.google.com/macros/s/AKfycbxQM5EcEs9sNCuPKJw9M0gzWVM7Rp96LZ5grpYp94joXsEDGmuwmD0aqYuFaD_cFmnO/exec';
-
 window.initLiveMatch = function () {
     pollLiveTable();
     if (livePollInterval) clearInterval(livePollInterval);
@@ -2925,28 +2923,12 @@ window.pollLiveTable = pollLiveTable;
 
 async function pollLiveTable() {
     try {
-        // Fetch players from original API (Internal DB)
-        const resInternal = await fetch(LIVE_API_URL);
-        if (!resInternal.ok) return;
-        const internalData = await resInternal.json();
+        // Fetch status/scores from internal API
+        const res = await fetch(LIVE_API_URL);
+        if (!res.ok) return;
+        const data = await res.json();
 
-        // Fetch scores from Google Bridge (Bypass InfinityFree anti-bot for the PI)
-        let bridgeData = { score_s1: 0, score_s2: 0 };
-        try {
-            const resBridge = await fetch(BRIDGE_URL);
-            if (resBridge.ok) bridgeData = await resBridge.json();
-        } catch (e) {
-            console.error("Bridge fetch error", e);
-        }
-
-        // Merge results
-        const combinedData = {
-            ...internalData,
-            score_s1: parseInt(bridgeData.score_s1 || 0),
-            score_s2: parseInt(bridgeData.score_s2 || 0)
-        };
-
-        updateLiveUI(combinedData);
+        updateLiveUI(data);
     } catch (e) {
         console.error("Live poll error", e);
     }
