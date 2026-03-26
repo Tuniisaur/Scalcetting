@@ -79,8 +79,6 @@ if ($isLoggedIn && isset($_GET['do'])) {
                     $stmtSit->execute([$targetId]);
                     $conn->commit();
 
-                    // Sync match status with Google Bridge
-                    syncMatchStatusWithGoogle($conn);
 
                     echo json_encode(['success' => true]); 
                     exit();
@@ -170,8 +168,6 @@ if ($isLoggedIn && isset($_GET['do'])) {
                 $conn->exec("UPDATE live_match SET s1_portiere=NULL, s1_attaccante=NULL, s2_portiere=NULL, s2_attaccante=NULL, score_s1=0, score_s2=0, data_inizio_match=NULL WHERE id=1");
                 $conn->commit();
 
-                // Reset Google Bridge scores
-                syncToGoogleBridge(['action' => 'reset']);
                 
                 echo json_encode(['success' => true, 'message' => 'Vittoria registrata!']);
                 exit();
@@ -327,8 +323,6 @@ if (isset($_GET['api'])) {
                 $stmtSit->execute([$targetId]);
                 $conn->commit();
 
-                // Sync match status with Google Bridge
-                syncMatchStatusWithGoogle($conn);
 
                 echo json_encode(['success' => true]);
                 exit();
@@ -429,8 +423,6 @@ if (isset($_GET['api'])) {
             elseif ($action === 'reset') {
                 $conn->exec("UPDATE live_match SET s1_portiere=NULL, s1_attaccante=NULL, s2_portiere=NULL, s2_attaccante=NULL, score_s1=0, score_s2=0 WHERE id=1");
                 
-                // Reset Google Bridge scores and status
-                syncToGoogleBridge(['action' => 'reset']);
 
                 echo json_encode(['success' => true]);
                 exit();
@@ -527,33 +519,5 @@ function isAdmin($conn) {
     return (bool)$stmt->fetchColumn();
 }
 
-/**
- * Checks if the match is full and notifies the Google Bridge
- */
-function syncMatchStatusWithGoogle($conn) {
-    try {
-        $stmt = $conn->query("SELECT s1_portiere, s1_attaccante, s2_portiere, s2_attaccante FROM live_match WHERE id = 1");
-        $m = $stmt->fetch(PDO::FETCH_ASSOC);
-        $full = ($m['s1_portiere'] && $m['s1_attaccante'] && $m['s2_portiere'] && $m['s2_attaccante']);
-        syncToGoogleBridge(['action' => 'sync_status', 'is_match_ready' => $full]);
-    } catch (Exception $e) {}
-}
-
-/**
- * Helper to talk to Google Bridge bypass-API
- */
-function syncToGoogleBridge($payload) {
-    $url = 'https://script.google.com/macros/s/AKfycbxQM5EcEs9sNCuPKJw9M0gzWVM7Rp96LZ5grpYp94joXsEDGmuwmD0aqYuFaD_cFmnO/exec';
-    $options = [
-        'http' => [
-            'header'  => "Content-Type: application/json\r\n",
-            'method'  => 'POST',
-            'content' => json_encode($payload),
-            'timeout' => 5
-        ]
-    ];
-    $context  = stream_context_create($options);
-    @file_get_contents($url, false, $context);
-}
 
 // FILE ENDS AFTER PHP TAG
