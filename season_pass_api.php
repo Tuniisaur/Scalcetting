@@ -86,7 +86,7 @@ function handleGetProgress($conn, $userId) {
             'level' => $currentLevel,
             'total_xp' => $totalXP,
             'xp_current' => $xpInCurrentLevel,
-            'xp_next' => $xpPerLevel,
+            'xp_next' => $xpToNextLevel,
             'rewards' => $rewards,
             'claimed_levels' => $claimedLevels,
             'objectives' => $objectives
