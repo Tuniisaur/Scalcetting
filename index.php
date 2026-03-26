@@ -15,8 +15,10 @@ header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 header("Expires: 0");
 
-function applyNameStylePHP($name, $style, $color = '') {
-    if (!$name) return "";
+function applyNameStylePHP($name, $style, $color = '')
+{
+    if (!$name)
+        return "";
     $displayName = $name;
     if ($style === 'arabic') {
         $map = [
@@ -28,9 +30,11 @@ function applyNameStylePHP($name, $style, $color = '') {
             'U' => 'و', 'V' => 'ف', 'W' => 'و', 'X' => 'خ', 'Y' => 'ي', 'Z' => 'ز'
         ];
         $chars = preg_split('//u', $name, -1, PREG_SPLIT_NO_EMPTY);
-        $mapped = array_map(function($c) use ($map) { return $map[$c] ?? $c; }, $chars);
+        $mapped = array_map(function ($c) use ($map) {
+            return $map[$c] ?? $c; }, $chars);
         $displayName = implode('', array_reverse($mapped));
-    } elseif ($style === 'chinese' || $style === 'name_chinese') {
+    }
+    elseif ($style === 'chinese' || $style === 'name_chinese') {
         $map = [
             'a' => '卂', 'b' => '乃', 'c' => '匚', 'd' => '刀', 'e' => '乇', 'f' => '下', 'g' => '厶', 'h' => '卄', 'i' => '工', 'j' => '丁',
             'k' => '长', 'l' => '乚', 'm' => '爪', 'n' => '冂', 'o' => '口', 'p' => '尸', 'q' => '口', 'r' => '尺', 's' => '丂', 't' => '丅',
@@ -40,9 +44,11 @@ function applyNameStylePHP($name, $style, $color = '') {
             'U' => '凵', 'V' => 'V', 'W' => '山', 'X' => '乂', 'Y' => '丫', 'Z' => '乙'
         ];
         $chars = preg_split('//u', $name, -1, PREG_SPLIT_NO_EMPTY);
-        $mapped = array_map(function($c) use ($map) { return $map[$c] ?? $c; }, $chars);
+        $mapped = array_map(function ($c) use ($map) {
+            return $map[$c] ?? $c; }, $chars);
         $displayName = implode('', $mapped);
-    } elseif ($style === 'russian' || $style === 'name_russian') {
+    }
+    elseif ($style === 'russian' || $style === 'name_russian') {
         $map = [
             'a' => 'а', 'b' => 'б', 'c' => 'ц', 'd' => 'д', 'e' => 'е', 'f' => 'ф', 'g' => 'г', 'h' => 'х', 'i' => 'и', 'j' => 'й',
             'k' => 'к', 'l' => 'л', 'm' => 'м', 'n' => 'н', 'o' => 'о', 'p' => 'п', 'q' => 'к', 'r' => 'р', 's' => 'с', 't' => 'т',
@@ -52,13 +58,14 @@ function applyNameStylePHP($name, $style, $color = '') {
             'U' => 'У', 'V' => 'В', 'W' => 'Ш', 'X' => 'Х', 'Y' => 'Ы', 'Z' => 'З'
         ];
         $chars = preg_split('//u', $name, -1, PREG_SPLIT_NO_EMPTY);
-        $mapped = array_map(function($c) use ($map) { return $map[$c] ?? $c; }, $chars);
+        $mapped = array_map(function ($c) use ($map) {
+            return $map[$c] ?? $c; }, $chars);
         $displayName = implode('', $mapped);
     }
-    
+
     $colorAttr = $color ? "data-color=\"$color\"" : "";
     $styleAttr = $style ? "data-style=\"$style\"" : "";
-    
+
     return "<span $colorAttr $styleAttr>$displayName</span>";
 }
 
@@ -108,14 +115,16 @@ if ($isLoggedIn && isset($_GET['do'])) {
                     $chk = $conn->query("SELECT s1_portiere, s1_attaccante, s2_portiere, s2_attaccante FROM live_match WHERE id=1")->fetch();
                     if ($chk['s1_portiere'] && $chk['s1_attaccante'] && $chk['s2_portiere'] && $chk['s2_attaccante']) {
                         $conn->exec("UPDATE live_match SET data_inizio_match = NOW() WHERE id = 1 AND data_inizio_match IS NULL");
-                    } else {
+                    }
+                    else {
                         $conn->exec("UPDATE live_match SET data_inizio_match = NULL WHERE id = 1");
                     }
 
                     $conn->commit();
-                    header("Location: index.php"); 
+                    header("Location: index.php");
                     exit();
-                } else {
+                }
+                else {
                     $conn->rollBack();
                     header("Location: index.php?error=Posto occupato");
                     exit();
@@ -123,9 +132,9 @@ if ($isLoggedIn && isset($_GET['do'])) {
             }
         }
         elseif ($action === 'reset') {
-             $conn->exec("UPDATE live_match SET s1_portiere=NULL, s1_attaccante=NULL, s2_portiere=NULL, s2_attaccante=NULL, data_inizio_match=NULL WHERE id=1");
-             header("Location: index.php");
-             exit();
+            $conn->exec("UPDATE live_match SET s1_portiere=NULL, s1_attaccante=NULL, s2_portiere=NULL, s2_attaccante=NULL, data_inizio_match=NULL WHERE id=1");
+            header("Location: index.php");
+            exit();
         }
         elseif ($action === 'win') {
             $winningTeam = (int)($_GET['team'] ?? 0);
@@ -148,7 +157,7 @@ if ($isLoggedIn && isset($_GET['do'])) {
                 if ($confirm !== 'yes') {
                     $teamName = ($winningTeam == 1) ? "Squadra Blu (1)" : "Squadra Rossa (2)";
                     $teamColor = ($winningTeam == 1) ? "#3b82f6" : "#ef4444";
-                    ?>
+?>
                     <!DOCTYPE html>
                     <html lang="it" class="light">
                     <head>
@@ -223,8 +232,8 @@ if ($isLoggedIn && isset($_GET['do'])) {
 
                 $matchId = $conn->lastInsertId();
                 $deltas = aggiornaEloEStatistiche($conn, [
-                    'squadra1' => [$players[0], $players[1]], 
-                    'squadra2' => [$players[2], $players[3]], 
+                    'squadra1' => [$players[0], $players[1]],
+                    'squadra2' => [$players[2], $players[3]],
                     'vincitore' => $winningTeam
                 ]);
 
@@ -238,7 +247,7 @@ if ($isLoggedIn && isset($_GET['do'])) {
                 processBets($conn, $winningTeam);
 
                 $conn->prepare("UPDATE live_match_bonuses SET match_id = ?, status = 'used' WHERE match_id = 1 AND status = 'active'")
-                     ->execute([$matchId]);
+                    ->execute([$matchId]);
 
                 // Season Pass XP & Objectives
                 $winPortiere = $pWin[0];
@@ -248,7 +257,7 @@ if ($isLoggedIn && isset($_GET['do'])) {
 
                 awardXP($conn, $winPortiere, 100);
                 checkMatchObjectives($conn, $winPortiere, true, 'portiere');
-                
+
                 awardXP($conn, $winAttaccante, 100);
                 checkMatchObjectives($conn, $winAttaccante, true, 'attaccante');
 
@@ -266,24 +275,32 @@ if ($isLoggedIn && isset($_GET['do'])) {
             }
         }
 
-    } catch (Exception $e) {
-        if (isset($conn) && $conn->inTransaction()) $conn->rollBack();
+    }
+    catch (Exception $e) {
+        if (isset($conn) && $conn->inTransaction())
+            $conn->rollBack();
         header("Location: index.php?error=" . urlencode($e->getMessage()));
         exit();
     }
 }
 
-function getKFactor($partite) { return ($partite < 10) ? 40 : (($partite < 20) ? 35 : (($partite < 30) ? 30 : (($partite < 40) ? 25 : (($partite < 50) ? 20 : 16)))); }
-function calcolaElo($eloGiocatore, $eloMedioAvversari, $risultato, $partiteGiocate, $multiplier = 1) {
+function getKFactor($partite)
+{
+    return ($partite < 10) ? 40 : (($partite < 20) ? 35 : (($partite < 30) ? 30 : (($partite < 40) ? 25 : (($partite < 50) ? 20 : 16))));
+}
+function calcolaElo($eloGiocatore, $eloPropriaSquadra, $eloSfidanteSquadra, $risultato, $partiteGiocate, $multiplier = 1)
+{
     $K = getKFactor($partiteGiocate) * $multiplier;
-    $expected = 1 / (1 + pow(10, ($eloMedioAvversari - $eloGiocatore) / 400));
+    $expected = 1 / (1 + pow(10, ($eloSfidanteSquadra - $eloPropriaSquadra) / 400));
     return max(100, min(3000, round($eloGiocatore + $K * ($risultato - $expected))));
 }
 
-function getEloMedioPesatoOverall($conn) {
+function getEloMedioPesatoOverall($conn)
+{
     $stmt = $conn->query("SELECT elo_portiere, partite_portiere, elo_attaccante, partite_attaccante FROM giocatori WHERE id != " . GHOST_ID . " AND partite_totali > 0");
     $players = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    $weightedSum = 0; $totalMatches = 0;
+    $weightedSum = 0;
+    $totalMatches = 0;
     foreach ($players as $p) {
         $weightedSum += ($p['elo_portiere'] * $p['partite_portiere']) + ($p['elo_attaccante'] * $p['partite_attaccante']);
         $totalMatches += $p['partite_portiere'] + $p['partite_attaccante'];
@@ -291,37 +308,54 @@ function getEloMedioPesatoOverall($conn) {
     return ($totalMatches == 0) ? 1500 : round($weightedSum / $totalMatches);
 }
 
-function aggiornaEloEStatistiche($conn, $dati) {
+function aggiornaEloEStatistiche($conn, $dati)
+{
     $eloFantasma = getEloMedioPesatoOverall($conn);
     $ids = array_merge($dati['squadra1'], $dati['squadra2']);
     $gs = [];
-    foreach($ids as $id) {
-        if ($id == GHOST_ID) { 
+    foreach ($ids as $id) {
+        if ($id == GHOST_ID) {
             $player = ['id' => GHOST_ID, 'elo_portiere' => $eloFantasma, 'elo_attaccante' => $eloFantasma, 'partite_portiere' => 0, 'partite_attaccante' => 0];
-        } else {
-            $stmt = $conn->prepare("SELECT * FROM giocatori WHERE id = ?"); $stmt->execute([$id]);
+        }
+        else {
+            $stmt = $conn->prepare("SELECT * FROM giocatori WHERE id = ?");
+            $stmt->execute([$id]);
             $player = $stmt->fetch(PDO::FETCH_ASSOC);
         }
         $gs[$id] = $player;
     }
-    $s1p = $gs[$dati['squadra1'][0]]; $s1a = $gs[$dati['squadra1'][1]];
-    $s2p = $gs[$dati['squadra2'][0]]; $s2a = $gs[$dati['squadra2'][1]];
+    $s1p = $gs[$dati['squadra1'][0]];
+    $s1a = $gs[$dati['squadra1'][1]];
+    $s2p = $gs[$dati['squadra2'][0]];
+    $s2a = $gs[$dati['squadra2'][1]];
 
-    $res1 = $dati['vincitore'] == 1 ? 1 : 0; 
+    $res1 = $dati['vincitore'] == 1 ? 1 : 0;
     $res2 = $dati['vincitore'] == 2 ? 1 : 0;
 
     $stmtB = $conn->query("SELECT user_id, item_key FROM live_match_bonuses WHERE match_id = 1 AND status = 'active'");
-    $bonuses = $stmtB->fetchAll(PDO::FETCH_GROUP | PDO::FETCH_COLUMN); 
+    $bonuses = $stmtB->fetchAll(PDO::FETCH_GROUP | PDO::FETCH_COLUMN);
 
-    $getMult = function($id) use ($bonuses) {
-        if (isset($bonuses[$id]) && in_array('x2_elo', $bonuses[$id])) return 2;
+    $getMult = function ($id) use ($bonuses) {
+        if (isset($bonuses[$id]) && in_array('x2_elo', $bonuses[$id]))
+            return 2;
         return 1;
     };
 
-    $nElo_s1p = calcolaElo($s1p['elo_portiere']?:1500, $s2a['elo_attaccante']?:1500, $res1, $s1p['partite_portiere'], $getMult($s1p['id']));
-    $nElo_s2p = calcolaElo($s2p['elo_portiere']?:1500, $s1a['elo_attaccante']?:1500, $res2, $s2p['partite_portiere'], $getMult($s2p['id']));
-    $nElo_s1a = calcolaElo($s1a['elo_attaccante']?:1500, $s2p['elo_portiere']?:1500, $res1, $s1a['partite_attaccante'], $getMult($s1a['id']));
-    $nElo_s2a = calcolaElo($s2a['elo_attaccante']?:1500, $s1p['elo_portiere']?:1500, $res2, $s2a['partite_attaccante'], $getMult($s2a['id']));
+    // Elo di base per ogni slot (fallback a 1500 se nessuna partita giocata nel ruolo)
+    $eloBase_s1p = $s1p['elo_portiere'] ?: 1500;
+    $eloBase_s1a = $s1a['elo_attaccante'] ?: 1500;
+    $eloBase_s2p = $s2p['elo_portiere'] ?: 1500;
+    $eloBase_s2a = $s2a['elo_attaccante'] ?: 1500;
+
+    // Media Elo di squadra: portiere (nel suo ruolo) + attaccante (nel suo ruolo)
+    $eloMedioSq1 = ($eloBase_s1p + $eloBase_s1a) / 2;
+    $eloMedioSq2 = ($eloBase_s2p + $eloBase_s2a) / 2;
+
+    // Ogni giocatore viene aggiornato in base alla media della propria squadra vs media avversaria
+    $nElo_s1p = calcolaElo($eloBase_s1p, $eloMedioSq1, $eloMedioSq2, $res1, $s1p['partite_portiere'], $getMult($s1p['id']));
+    $nElo_s1a = calcolaElo($eloBase_s1a, $eloMedioSq1, $eloMedioSq2, $res1, $s1a['partite_attaccante'], $getMult($s1a['id']));
+    $nElo_s2p = calcolaElo($eloBase_s2p, $eloMedioSq2, $eloMedioSq1, $res2, $s2p['partite_portiere'], $getMult($s2p['id']));
+    $nElo_s2a = calcolaElo($eloBase_s2a, $eloMedioSq2, $eloMedioSq1, $res2, $s2a['partite_attaccante'], $getMult($s2a['id']));
 
     updatePlayerRole($conn, $s1p['id'], 'elo_portiere', $nElo_s1p, 'vittorie_portiere', 'sconfitte_portiere', 'partite_portiere', $res1);
     updatePlayerRole($conn, $s2p['id'], 'elo_portiere', $nElo_s2p, 'vittorie_portiere', 'sconfitte_portiere', 'partite_portiere', $res2);
@@ -329,20 +363,25 @@ function aggiornaEloEStatistiche($conn, $dati) {
     updatePlayerRole($conn, $s2a['id'], 'elo_attaccante', $nElo_s2a, 'vittorie_attaccante', 'sconfitte_attaccante', 'partite_attaccante', $res2);
 
     return [
-        's1p' => $nElo_s1p - ($s1p['elo_portiere'] ?: 1500),
-        's1a' => $nElo_s1a - ($s1a['elo_attaccante'] ?: 1500),
-        's2p' => $nElo_s2p - ($s2p['elo_portiere'] ?: 1500),
-        's2a' => $nElo_s2a - ($s2a['elo_attaccante'] ?: 1500)
+        's1p' => $nElo_s1p - $eloBase_s1p,
+        's1a' => $nElo_s1a - $eloBase_s1a,
+        's2p' => $nElo_s2p - $eloBase_s2p,
+        's2a' => $nElo_s2a - $eloBase_s2a,
     ];
 }
-function updatePlayerRole($conn, $id, $eloField, $newElo, $winField, $loseField, $matchField, $isWin) {
-    if ($id == GHOST_ID) return;
-    $winAdd = $isWin ? 1 : 0; $loseAdd = $isWin ? 0 : 1;
+function updatePlayerRole($conn, $id, $eloField, $newElo, $winField, $loseField, $matchField, $isWin)
+{
+    if ($id == GHOST_ID)
+        return;
+    $winAdd = $isWin ? 1 : 0;
+    $loseAdd = $isWin ? 0 : 1;
     $sql = "UPDATE giocatori SET $eloField = ?, $matchField = $matchField + 1, partite_totali = partite_totali + 1, $winField = $winField + ?, $loseField = $loseField + ?, vittorie_totali = vittorie_totali + ?, sconfitte_totali = sconfitte_totali + ? WHERE id = ?";
     $conn->prepare($sql)->execute([$newElo, $winAdd, $loseAdd, $winAdd, $loseAdd, $id]);
 }
-function isAdmin($conn) {
-    if (!isset($_SESSION['user_id'])) return false;
+function isAdmin($conn)
+{
+    if (!isset($_SESSION['user_id']))
+        return false;
     $stmt = $conn->prepare("SELECT is_admin FROM giocatori WHERE id = ?");
     $stmt->execute([$_SESSION['user_id']]);
     $val = $stmt->fetchColumn();
@@ -364,16 +403,18 @@ if (isset($_GET['api'])) {
             $response = [];
             $roles = ['s1_portiere', 's1_attaccante', 's2_portiere', 's2_attaccante'];
 
-            foreach($roles as $r) {
+            foreach ($roles as $r) {
                 if (!empty($status[$r])) {
                     if ($status[$r] == GHOST_ID) {
                         $response[$r] = ['id' => GHOST_ID, 'nome' => 'Ospite'];
-                    } else {
+                    }
+                    else {
                         $stmtN = $conn->prepare("SELECT id, nome FROM giocatori WHERE id = ?");
                         $stmtN->execute([$status[$r]]);
                         $response[$r] = $stmtN->fetch(PDO::FETCH_ASSOC);
                     }
-                } else {
+                }
+                else {
                     $response[$r] = null;
                 }
             }
@@ -389,12 +430,13 @@ if (isset($_GET['api'])) {
 
             $input = json_decode(file_get_contents('php://input'), true);
             $action = $input['action'] ?? '';
-            $playerId = $userId; 
+            $playerId = $userId;
 
             if ($action === 'sit') {
                 $pos = $input['pos'];
                 $map = ['s1p' => 's1_portiere', 's1a' => 's1_attaccante', 's2p' => 's2_portiere', 's2a' => 's2_attaccante'];
-                if (!isset($map[$pos])) throw new Exception("Posizione errata");
+                if (!isset($map[$pos]))
+                    throw new Exception("Posizione errata");
                 $targetCol = $map[$pos];
 
                 $targetId = $playerId;
@@ -430,7 +472,8 @@ if (isset($_GET['api'])) {
                 $chk = $conn->query("SELECT s1_portiere, s1_attaccante, s2_portiere, s2_attaccante FROM live_match WHERE id=1")->fetch();
                 if ($chk['s1_portiere'] && $chk['s1_attaccante'] && $chk['s2_portiere'] && $chk['s2_attaccante']) {
                     $conn->exec("UPDATE live_match SET data_inizio_match = NOW() WHERE id = 1 AND data_inizio_match IS NULL");
-                } else {
+                }
+                else {
                     $conn->exec("UPDATE live_match SET data_inizio_match = NULL WHERE id = 1");
                 }
 
@@ -446,10 +489,14 @@ if (isset($_GET['api'])) {
                 $players = [(int)$match['s1_portiere'], (int)$match['s1_attaccante'], (int)$match['s2_portiere'], (int)$match['s2_attaccante']];
 
                 if (!in_array($playerId, $players) && !isAdmin($conn)) {
-                    $conn->rollBack(); echo json_encode(['success'=>false, 'error'=>'Non sei in partita!']); exit();
+                    $conn->rollBack();
+                    echo json_encode(['success' => false, 'error' => 'Non sei in partita!']);
+                    exit();
                 }
                 if (in_array(0, $players)) {
-                    $conn->rollBack(); echo json_encode(['success'=>false, 'error'=>'Partita incompleta!']); exit();
+                    $conn->rollBack();
+                    echo json_encode(['success' => false, 'error' => 'Partita incompleta!']);
+                    exit();
                 }
 
                 $stmtStagione = $conn->query("SELECT id FROM stagioni WHERE is_active = 1 LIMIT 1");
@@ -459,12 +506,13 @@ if (isset($_GET['api'])) {
                 $stmt->execute([$players[0], $players[1], $players[2], $players[3], $winningTeam, date('Y-m-d H:i:s'), $activeSeasonId]);
 
                 $matchId = $conn->lastInsertId();
-                $deltas = aggiornaEloEStatistiche($conn, ['squadra1'=>[$players[0],$players[1]], 'squadra2'=>[$players[2],$players[3]], 'vincitore'=>$winningTeam]);
+                $deltas = aggiornaEloEStatistiche($conn, ['squadra1' => [$players[0], $players[1]], 'squadra2' => [$players[2], $players[3]], 'vincitore' => $winningTeam]);
 
                 $sqlUpd = "UPDATE partite SET elo_delta_s1p=?, elo_delta_s1a=?, elo_delta_s2p=?, elo_delta_s2a=? WHERE id=?";
                 $conn->prepare($sqlUpd)->execute([$deltas['s1p'], $deltas['s1a'], $deltas['s2p'], $deltas['s2a'], $matchId]);
 
-                if (isset($input['deuce']) && $input['deuce'] === 'yes') $_GET['deuce'] = 'yes';
+                if (isset($input['deuce']) && $input['deuce'] === 'yes')
+                    $_GET['deuce'] = 'yes';
 
                 $pWin = ($winningTeam == 1) ? [$players[0], $players[1]] : [$players[2], $players[3]];
                 $pLoss = ($winningTeam == 1) ? [$players[2], $players[3]] : [$players[0], $players[1]];
@@ -473,7 +521,7 @@ if (isset($_GET['api'])) {
                 processBets($conn, $winningTeam);
 
                 $conn->prepare("UPDATE live_match_bonuses SET match_id = ?, status = 'used' WHERE match_id = 1 AND status = 'active'")
-                     ->execute([$matchId]);
+                    ->execute([$matchId]);
 
                 // Season Pass XP & Objectives
                 $winPortiere = $pWin[0];
@@ -483,7 +531,7 @@ if (isset($_GET['api'])) {
 
                 awardXP($conn, $winPortiere, 100);
                 checkMatchObjectives($conn, $winPortiere, true, 'portiere');
-                
+
                 awardXP($conn, $winAttaccante, 100);
                 checkMatchObjectives($conn, $winAttaccante, true, 'attaccante');
 
@@ -501,7 +549,8 @@ if (isset($_GET['api'])) {
 
             elseif ($action === 'quick_match') {
                 if (!isAdmin($conn)) {
-                    echo json_encode(['success' => false, 'error' => 'Accesso negato: Solo Admin']); exit();
+                    echo json_encode(['success' => false, 'error' => 'Accesso negato: Solo Admin']);
+                    exit();
                 }
 
                 $s1p = (int)$input['s1p'];
@@ -511,7 +560,8 @@ if (isset($_GET['api'])) {
                 $winningTeam = (int)$input['winner'];
 
                 if (!$s1p || !$s1a || !$s2p || !$s2a || !$winningTeam) {
-                    echo json_encode(['success' => false, 'error' => 'Dati mancanti']); exit();
+                    echo json_encode(['success' => false, 'error' => 'Dati mancanti']);
+                    exit();
                 }
 
                 $conn->beginTransaction();
@@ -523,7 +573,7 @@ if (isset($_GET['api'])) {
                 $stmt->execute([$s1p, $s1a, $s2p, $s2a, $winningTeam, date('Y-m-d H:i:s'), $activeSeasonId]);
 
                 $matchId = $conn->lastInsertId();
-                $deltas = aggiornaEloEStatistiche($conn, ['squadra1'=>[$s1p,$s1a], 'squadra2'=>[$s2p,$s2a], 'vincitore'=>$winningTeam]);
+                $deltas = aggiornaEloEStatistiche($conn, ['squadra1' => [$s1p, $s1a], 'squadra2' => [$s2p, $s2a], 'vincitore' => $winningTeam]);
 
                 $sqlUpd = "UPDATE partite SET elo_delta_s1p=?, elo_delta_s1a=?, elo_delta_s2p=?, elo_delta_s2a=? WHERE id=?";
                 $conn->prepare($sqlUpd)->execute([$deltas['s1p'], $deltas['s1a'], $deltas['s2p'], $deltas['s2a'], $matchId]);
@@ -540,7 +590,7 @@ if (isset($_GET['api'])) {
 
                 awardXP($conn, $winPortiere, 100);
                 checkMatchObjectives($conn, $winPortiere, true, 'portiere');
-                
+
                 awardXP($conn, $winAttaccante, 100);
                 checkMatchObjectives($conn, $winAttaccante, true, 'attaccante');
 
@@ -561,17 +611,19 @@ if (isset($_GET['api'])) {
                 exit();
             }
         }
-    } catch (Exception $e) {
-        if (isset($conn) && $conn->inTransaction()) $conn->rollBack();
+    }
+    catch (Exception $e) {
+        if (isset($conn) && $conn->inTransaction())
+            $conn->rollBack();
         http_response_code(500);
         echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         exit();
     }
     exit();
 }
-    $database = new Database();
-    $conn = $database->getConnection();
-    $currentUserIsAdmin = isAdmin($conn);
+$database = new Database();
+$conn = $database->getConnection();
+$currentUserIsAdmin = isAdmin($conn);
 ?>
 <!DOCTYPE html>
 <html lang="en"> 
@@ -705,7 +757,8 @@ if (isset($_GET['api'])) {
                 <div class="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden ring-2 ring-primary/20 flex-shrink-0 relative">
                     <?php if (!empty($_SESSION['user_aura'])): ?>
                         <div class="absolute inset-[-4px] rounded-full aura-<?php echo $_SESSION['user_aura']; ?> opacity-70 z-0"></div>
-                    <?php endif; ?>
+                    <?php
+    endif; ?>
                     <div class="w-full h-full rounded-full overflow-hidden relative z-10 bg-gray-200 dark:bg-gray-700">
                         <img id="userAvatarImg" src="<?php echo $_SESSION['user_avatar'] ?? ''; ?>" class="w-full h-full object-cover <?php echo empty($_SESSION['user_avatar']) ? 'hidden' : ''; ?>" alt="Avatar">
                         <div id="userInitials" class="h-full w-full flex items-center justify-center bg-gray-400 text-white font-bold <?php echo !empty($_SESSION['user_avatar']) ? 'hidden' : ''; ?>">
@@ -724,12 +777,14 @@ if (isset($_GET['api'])) {
                 </div>
                 <span class="material-symbols-outlined text-red-500 hover:text-red-700" onclick="event.stopPropagation(); performLogout();">logout</span>
              </div>
-             <?php else: ?>
+             <?php
+else: ?>
              <button id="loginButton" onclick="toggleAuthModal()" class="w-full flex items-center justify-center gap-2 bg-primary xl:hover:bg-blue-600 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-blue-500/20 active:scale-95">
                 <span class="material-symbols-outlined">login</span>
                 <span>Accedi</span>
              </button>
-             <?php endif; ?>
+             <?php
+endif; ?>
         </div>
     </aside>
 
@@ -745,7 +800,8 @@ if (isset($_GET['api'])) {
                             <div class="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden ring-2 ring-primary/20 relative">
                                 <?php if (!empty($_SESSION['user_aura'])): ?>
                                     <div class="absolute inset-[-4px] rounded-full aura-<?php echo $_SESSION['user_aura']; ?> opacity-70 z-0"></div>
-                                <?php endif; ?>
+                                <?php
+    endif; ?>
                                 <div class="w-full h-full rounded-full overflow-hidden relative z-10 bg-gray-200 dark:bg-gray-700">
                                     <img id="welcomeAvatar" src="<?php echo $_SESSION['user_avatar'] ?? ''; ?>" class="w-full h-full object-cover <?php echo empty($_SESSION['user_avatar']) ? 'hidden' : ''; ?>" alt="Avatar">
                                     <div id="welcomeInitials" class="h-full w-full flex items-center justify-center bg-gray-400 text-white font-bold <?php echo !empty($_SESSION['user_avatar']) ? 'hidden' : ''; ?>">
@@ -766,7 +822,8 @@ if (isset($_GET['api'])) {
                             <span class="material-symbols-outlined text-[22px]">confirmation_number</span>
                         </button>
                     </div>
-                    <?php endif; ?>
+                    <?php
+endif; ?>
 
                     <?php if ($isLoggedIn): ?>
                     <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#067ff9] to-[#045cb5] p-6 text-white shadow-lg shadow-primary/20 mb-4">
@@ -817,7 +874,8 @@ if (isset($_GET['api'])) {
                             </div>
                         </div>
                     </div>
-                    <?php else: ?>
+                    <?php
+else: ?>
                     <div class="relative overflow-hidden rounded-2xl bg-white dark:bg-gray-800 p-8 text-center shadow-lg border border-gray-100 dark:border-gray-700">
                         <div class="h-16 w-16 bg-gray-100 dark:bg-gray-700 text-gray-400 rounded-full flex items-center justify-center mx-auto mb-4">
                             <span class="material-symbols-outlined text-4xl">lock</span>
@@ -829,7 +887,8 @@ if (isset($_GET['api'])) {
                             <span>Accedi</span>
                         </button>
                     </div>
-                    <?php endif; ?>
+                    <?php
+endif; ?>
                 </header>
 
                 <div class="px-5 mb-8 md:hidden">
@@ -950,7 +1009,8 @@ if (isset($_GET['api'])) {
                             </div>
                         </div>
                     </div>
-                    <?php endif; ?>
+                    <?php
+endif; ?>
                 </div>
 
                 <div class="hidden md:grid grid-cols-12 gap-8 mb-8">
@@ -998,7 +1058,8 @@ if (isset($_GET['api'])) {
                             </div>
                         </div>
                     </div>
-                    <?php else: ?>
+                    <?php
+else: ?>
                     <div class="col-span-12 bg-white dark:bg-gray-800 p-10 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm text-center flex flex-col items-center justify-center min-h-[300px]">
                         <div class="h-20 w-20 bg-gray-100 dark:bg-gray-700/50 rounded-full flex items-center justify-center mb-6 ring-8 ring-gray-50 dark:ring-gray-700/20">
                             <span class="material-symbols-outlined text-4xl text-gray-400 dark:text-gray-500">lock</span>
@@ -1010,7 +1071,8 @@ if (isset($_GET['api'])) {
                             <span>Effettua il Login</span>
                         </button>
                     </div>
-                    <?php endif; ?>
+                    <?php
+endif; ?>
 
                     <div class="col-span-12 h-full">
                         <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm h-full flex flex-col">
@@ -1142,7 +1204,8 @@ if (isset($_GET['api'])) {
                                     </div>
                                 </div>
                             </div>
-                            <?php endif; ?>
+                            <?php
+endif; ?>
                         </div>
                     </div>
                 </div>
@@ -1182,7 +1245,8 @@ if (isset($_GET['api'])) {
                          </button>
                     </div>
                     <?php unset($_SESSION['match_payout']); ?>
-                    <?php endif; ?>
+                    <?php
+endif; ?>
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-lg font-bold text-gray-900 dark:text-white">Partite Recenti</h3>
                         <button class="text-sm font-medium text-primary hover:text-primary/80" onclick="showPage('matches')">Vedi Tutte</button>
@@ -1393,7 +1457,8 @@ if (isset($_GET['api'])) {
             <span class="font-bold tracking-wide">Aggiungi Partita</span>
         </button>
     </div>
-    <?php endif; ?>
+    <?php
+endif; ?>
 
     <nav class="md:hidden fixed bottom-0 left-0 w-full bg-white dark:bg-background-dark border-t border-gray-100 dark:border-gray-800 px-6 py-3 flex justify-between items-center z-50 pb-6 shadow-lg">
         <a href="#" onclick="showPage('home')" class="nav-item flex flex-col items-center gap-1 text-primary group active" data-target="home">
@@ -2206,7 +2271,8 @@ if (isset($_GET['api'])) {
         document.addEventListener('DOMContentLoaded', () => {
              startBettingPoll();
         });
-        <?php endif; ?>
+        <?php
+endif; ?>
 
     </script>
 
