@@ -22,19 +22,25 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                echo "Copying files to ${APP_DIR}, excluding .git and uploads"
+                echo "Copying files to ${APP_DIR}, excluding .git, uploads, and sessions"
                 sh """
-                    rsync -a --delete --exclude='.git' --exclude='uploads/' ${WORKSPACE}/ ${APP_DIR}/
+                    rsync -a --delete \
+                        --exclude='.git' \
+                        --exclude='uploads/' \
+                        --exclude='sessions/' \
+                        ${WORKSPACE}/ ${APP_DIR}/
                 """
             }
         }
 
         stage('Permissions') {
             steps {
-                echo "Setting permissions for ${APP_DIR} (excluding uploads)"
+                echo "Setting permissions for ${APP_DIR} (excluding uploads and sessions)"
                 sh """
-                    # Imposta www-data su tutti tranne uploads
-                    find ${APP_DIR} -mindepth 1 -not -path '${APP_DIR}/uploads*' -exec chown -R www-data:www-data {} +
+                    find ${APP_DIR} -mindepth 1 \
+                        -not -path '${APP_DIR}/uploads*' \
+                        -not -path '${APP_DIR}/sessions*' \
+                        -exec chown -R www-data:www-data {} +
                 """
             }
         }
