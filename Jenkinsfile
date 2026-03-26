@@ -2,21 +2,14 @@ pipeline {
     agent any
 
     environment {
-        APP_DIR = "/opt/scalcetting"
-        BRANCH = "main"
+        APP_DIR = '/opt/scalcetting'
     }
 
     stages {
 
-        stage('Checkout') {
+        stage('Checkout SCM') {
             steps {
-                echo "Cloning branch ${BRANCH} in Jenkins workspace"
-                checkout([$class: 'GitSCM',
-                    branches: [[name: "refs/heads/${BRANCH}"]],
-                    doGenerateSubmoduleConfigurations: false,
-                    extensions: [],
-                    userRemoteConfigs: [[url: 'https://github.com/Tuniisaur/Scalcetting.git']]
-                ])
+                checkout scm
             }
         }
 
@@ -24,25 +17,36 @@ pipeline {
             steps {
                 echo "Copying files to ${APP_DIR}, excluding .git, uploads, and sessions"
                 sh """
-                    rsync -a --delete \
+                    sudo rsync -a --delete \
                         --exclude='.git' \
                         --exclude='uploads/' \
                         --exclude='sessions/' \
+                        --chown=www-data:www-data \
                         ${WORKSPACE}/ ${APP_DIR}/
                 """
             }
         }
 
-        stage('Permissions') {
+        stage('Set Permissions') {
             steps {
-                echo "Setting permissions for ${APP_DIR} (excluding uploads and sessions)"
+                echo "Setting permissions for ${APP_DIR} (excluding uploads, sessions, and .git)"
                 sh """
-                    find ${APP_DIR} -mindepth 1 \
-                        -not -path '${APP_DIR}/uploads*' \
-                        -not -path '${APP_DIR}/sessions*' \
-                        -exec chown -R www-data:www-data {} +
+                    sudo find ${APP_DIR} -mindepth 1 \
+                        -not -path "${APP_DIR}/uploads*" \
+                        -not -path "${APP_DIR}/sessions*" \
+                        -not -path "${APP_DIR}/.git*" \
+                        -exec chmod 755 {} +
                 """
             }
+        }
+    }
+
+    post {
+        success {
+            echo 'Deployment completed successfully!'
+        }
+        failure {
+            echo 'Deployment failed!'
         }
     }
 }
