@@ -4,6 +4,41 @@
  * Handles XP awarding, level ups, and reward distribution.
  */
 
+/**
+ * XP richiesti per passare dal livello $level al livello $level+1.
+ * Curva graduale: 500 + (level - 1) * 200
+ * Lv1→2: 500, Lv2→3: 700, Lv3→4: 900, ...
+ */
+function xpRequiredForLevel($level) {
+    return 500 + ($level - 1) * 200;
+}
+
+/**
+ * Calcola il livello raggiunto dato un totale XP accumulato.
+ */
+function computeLevel($totalXP) {
+    $level = 1;
+    $accumulated = 0;
+    while (true) {
+        $needed = xpRequiredForLevel($level);
+        if ($accumulated + $needed > $totalXP) break;
+        $accumulated += $needed;
+        $level++;
+    }
+    return $level;
+}
+
+/**
+ * Calcola quanti XP sono stati accumulati fino all'inizio del livello corrente.
+ */
+function xpAtLevelStart($level) {
+    $total = 0;
+    for ($i = 1; $i < $level; $i++) {
+        $total += xpRequiredForLevel($i);
+    }
+    return $total;
+}
+
 function awardXP($conn, $playerId, $amount) {
     if ($playerId == 9999 || $playerId <= 0) return null;
 
@@ -15,11 +50,10 @@ function awardXP($conn, $playerId, $amount) {
 
     $newXP = $player['xp'] + $amount;
     $currentLevel = $player['level'];
-    
-    // Level formula: 500 XP per level
-    $xpPerLevel = 500;
-    $newLevel = floor($newXP / $xpPerLevel) + 1;
-    
+
+    // Level formula: curva graduale 500 + (level-1)*200
+    $newLevel = computeLevel($newXP);
+
     $leveledUp = ($newLevel > $currentLevel);
     
     // 2. Update player XP and Level
