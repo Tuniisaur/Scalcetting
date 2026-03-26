@@ -168,7 +168,7 @@ try {
 
     elseif ($action === 'check') {
         if (isset($_SESSION['user_id'])) {
-            $stmt = $conn->prepare("SELECT id, nome, username, is_admin, avatar_url FROM giocatori WHERE id = ?");
+            $stmt = $conn->prepare("SELECT id, nome, username, is_admin, avatar_url, active_name_style, active_name_color, active_aura, active_title FROM giocatori WHERE id = ?");
             $stmt->execute([$_SESSION['user_id']]);
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
             
