@@ -19,6 +19,7 @@ pipeline {
                 sh """
                     sudo rsync -a --delete \
                         --exclude='.git' \
+                        --exclude='.env' \
                         --exclude='uploads/' \
                         --exclude='sessions/' \
                         --chown=www-data:www-data \
