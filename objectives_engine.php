@@ -11,10 +11,10 @@ function checkMatchObjectives($conn, $playerId, $isWin, $role = null)
     if ($playerId == 9999 || $playerId <= 0)
         return;
 
-    // 1. Daily Reset Check
+    // 1. Daily Reset Check — MUST happen before fetching objectives
     checkDailyReset($conn, $playerId);
 
-    // 2. Identify relevant objectives
+    // 2. Identify relevant objectives (fetch AFTER reset so daily ones are fresh)
     $stmt = $conn->prepare("SELECT o.*, uo.current_value, uo.completed 
                             FROM objectives o 
                             LEFT JOIN user_objectives uo ON o.id = uo.objective_id AND uo.user_id = ?");
@@ -102,19 +102,19 @@ function checkDailyReset($conn, $playerId)
 {
     $today = date('Y-m-d');
 
-    // Check if user has any daily objective updated before today
+    // Check if user has any daily objective not yet reset today
     $stmt = $conn->prepare("SELECT COUNT(*) FROM user_objectives uo 
                             JOIN objectives o ON uo.objective_id = o.id 
-                            WHERE uo.user_id = ? AND o.type = 'daily' AND uo.last_updated < ?");
+                            WHERE uo.user_id = ? AND o.type = 'daily' 
+                            AND (uo.last_updated IS NULL OR uo.last_updated < ?)");
     $stmt->execute([$playerId, $today]);
 
     if ($stmt->fetchColumn() > 0) {
-        // Reset daily objectives for this user
-        $stmtReset = $conn->prepare("UPDATE user_objectives uo 
+        // Delete rows entirely so they come back as 0/target (not completed) on next fetch
+        $stmtReset = $conn->prepare("DELETE uo FROM user_objectives uo 
                                     JOIN objectives o ON uo.objective_id = o.id 
-                                    SET uo.current_value = 0, uo.completed = 0, uo.last_updated = ? 
                                     WHERE uo.user_id = ? AND o.type = 'daily'");
-        $stmtReset->execute([$today, $playerId]);
+        $stmtReset->execute([$playerId]);
     }
 }
 
