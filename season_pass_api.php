@@ -65,12 +65,8 @@ function handleGetProgress($conn, $userId) {
             error_log("Missing user_season_claimed table: " . $e->getMessage());
         }
 
-        // 4. Fetch Objectives
-        try {
-            checkDailyReset($conn, $userId); // Ensure fresh daily missions
-        } catch (Exception $e) {
-            error_log("checkDailyReset failed: " . $e->getMessage());
-        }
+        // 4. Daily Reset + Fetch Objectives
+        checkDailyReset($conn, $userId);
 
         $stmtObjectives = $conn->prepare("SELECT o.*, 
                                           COALESCE(uo.current_value, 0) as current_value, 
