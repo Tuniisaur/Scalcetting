@@ -47,12 +47,13 @@ function handleGetProgress($conn, $userId) {
         $stmtRewards->execute();
         $rewards = $stmtRewards->fetchAll(PDO::FETCH_ASSOC);
 
-        // 3. XP Info
-        $xpPerLevel = 500;
+        // 3. XP Info — curva graduale: xpPerLevel = 500 + (level-1)*200
+        require_once 'season_pass_engine.php'; // assicura le funzioni disponibili
         $currentLevel = (int)$player['level'];
         $totalXP = (int)$player['xp'];
-        $xpInCurrentLevel = $totalXP % $xpPerLevel;
-        $xpToNextLevel = $xpPerLevel - $xpInCurrentLevel;
+        $xpStart = xpAtLevelStart($currentLevel);
+        $xpInCurrentLevel = $totalXP - $xpStart;
+        $xpToNextLevel = xpRequiredForLevel($currentLevel);
 
         // 3.5 Fetch Claimed Rewards
         $claimedLevels = [];
