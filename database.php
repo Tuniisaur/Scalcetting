@@ -1,10 +1,10 @@
 <?php
 class Database
 {
-    private $host = '';
-    private $db_name = '';
-    private $username = '';
-    private $password = '';
+    private $host;
+    private $db_name;
+    private $username;
+    private $password;
     public $conn; // database connection
     private $isLocal = false;
 
@@ -18,6 +18,11 @@ class Database
             $this->db_name = 'scalcetting_db'; // Cambia se il tuo db locale ha un altro nome
             $this->username = 'root';
             $this->password = '';
+        } else {
+            $this->host = getenv('DB_HOST');
+            $this->db_name = getenv('DB_NAME');
+            $this->username = getenv('DB_USER');
+            $this->password = getenv('DB_PASS');
         }
 
         $this->getConnection();
