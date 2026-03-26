@@ -1,4 +1,3 @@
-
 const API_URL = 'index.php?api=1';
 let currentUser = null;
 let giocatori = [];
@@ -2670,7 +2669,7 @@ function showPage(pageId) {
 
     // Desktop Active
     const activeNavDesktop = document.querySelector(`.nav-item-desktop[data-target="${pageId}"]`);
-    if (activeNavDesktop) {
+    if (activeNavDesktop && pageId !== 'season-pass') {
         activeNavDesktop.classList.add('active', 'bg-blue-50', 'text-primary', 'dark:bg-gray-700/50');
     }
 }
@@ -4211,7 +4210,7 @@ async function claimSeasonReward(level) {
             headers: { 'Content-Type': 'application/json' }
         });
         const data = await res.json();
-        
+
         if (data.success) {
             showToast("Premio riscattato con successo!", 'success');
             loadSeasonPass(); // Refresh UI
@@ -4309,7 +4308,7 @@ async function checkSeasonPassNotifications() {
         const res = await fetch('season_pass_api.php?action=get_progress');
         const data = await res.json();
         if (data.success) {
-            const hasUnclaimed = data.rewards.some(reward => 
+            const hasUnclaimed = data.rewards.some(reward =>
                 data.level >= reward.level && !(data.claimed_levels || []).includes(parseInt(reward.level))
             );
             updateSPButtonNotification(hasUnclaimed);
@@ -4322,10 +4321,10 @@ async function checkSeasonPassNotifications() {
 function updateSPButtonNotification(hasUnclaimed) {
     const btnMobile = document.getElementById('sp-nav-btn-mobile');
     const btnDesktop = document.getElementById('sp-nav-btn-desktop');
-    
+
     [btnMobile, btnDesktop].forEach(btn => {
         if (!btn) return;
-        
+
         // Add a dot if not exists
         let dot = btn.querySelector('.notification-dot');
         if (hasUnclaimed) {
