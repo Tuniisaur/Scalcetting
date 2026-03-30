@@ -27,6 +27,7 @@ if (isset($_COOKIE[session_name()])) {
 date_default_timezone_set('Europe/Rome');
 require_once 'database.php';
 require_once 'objectives_engine.php';
+require_once 'betting_engine.php';
 
 define('GHOST_ID', 9999);
 
@@ -45,6 +46,9 @@ if ($isLoggedIn && isset($_GET['do'])) {
         $conn = $database->getConnection();
         $action = $_GET['do'];
         
+        $tableId = (int)($_GET['table'] ?? 1);
+        if ($tableId < 1) $tableId = 1;
+        
         if ($action === 'sit' || $action === 'sit_guest') {
             $pos = $_GET['pos'] ?? '';
             $map = ['s1p' => 's1_portiere', 's1a' => 's1_attaccante', 's2p' => 's2_portiere', 's2a' => 's2_attaccante'];
@@ -55,7 +59,8 @@ if ($isLoggedIn && isset($_GET['do'])) {
 
                 // Unique Guest Check
                 if ($targetId === GHOST_ID) {
-                    $stmtCount = $conn->query("SELECT COUNT(*) FROM live_match WHERE (s1_portiere=9999 OR s1_attaccante=9999 OR s2_portiere=9999 OR s2_attaccante=9999) AND id=1");
+                    $stmtCount = $conn->prepare("SELECT COUNT(*) FROM live_match WHERE (s1_portiere=9999 OR s1_attaccante=9999 OR s2_portiere=9999 OR s2_attaccante=9999)");
+                    $stmtCount->execute();
                     if ($stmtCount->fetchColumn() > 0) {
                          echo json_encode(['success' => false, 'error' => 'Un solo ospite per volta!']);
                          exit();
@@ -63,20 +68,21 @@ if ($isLoggedIn && isset($_GET['do'])) {
                 }
 
                 $conn->beginTransaction();
-                $stmtCheck = $conn->query("SELECT $targetCol FROM live_match WHERE id = 1 FOR UPDATE");
+                $stmtCheck = $conn->prepare("SELECT $targetCol FROM live_match WHERE id = 1 FOR UPDATE");
+                $stmtCheck->execute();
                 $occupanteId = $stmtCheck->fetchColumn();
 
                 if (!$occupanteId || $occupanteId == $targetId) {
                     if ($targetId !== GHOST_ID) {
-                        $conn->exec("UPDATE live_match SET 
-                                     s1_portiere = CASE WHEN s1_portiere = $targetId THEN NULL ELSE s1_portiere END,
-                                     s1_attaccante = CASE WHEN s1_attaccante = $targetId THEN NULL ELSE s1_attaccante END,
-                                     s2_portiere = CASE WHEN s2_portiere = $targetId THEN NULL ELSE s2_portiere END,
-                                     s2_attaccante = CASE WHEN s2_attaccante = $targetId THEN NULL ELSE s2_attaccante END
-                                     WHERE id = 1");
+                        $conn->prepare("UPDATE live_match SET 
+                                     s1_portiere = CASE WHEN s1_portiere = ? THEN NULL ELSE s1_portiere END,
+                                     s1_attaccante = CASE WHEN s1_attaccante = ? THEN NULL ELSE s1_attaccante END,
+                                     s2_portiere = CASE WHEN s2_portiere = ? THEN NULL ELSE s2_portiere END,
+                                     s2_attaccante = CASE WHEN s2_attaccante = ? THEN NULL ELSE s2_attaccante END
+                                     WHERE id = 1")->execute([$targetId, $targetId, $targetId, $targetId]);
                     }
-                    $stmtSit = $conn->prepare("UPDATE live_match SET $targetCol = ? WHERE id = 1");
-                    $stmtSit->execute([$targetId]);
+                    $stmtSit = $conn->prepare("UPDATE live_match SET $targetCol = ?, table_id = ? WHERE id = 1");
+                    $stmtSit->execute([$targetId, $tableId]);
                     $conn->commit();
 
 
@@ -95,7 +101,9 @@ if ($isLoggedIn && isset($_GET['do'])) {
             
             if ($winningTeam === 1 || $winningTeam === 2) {
                 
-                $matchPre = $conn->query("SELECT * FROM live_match WHERE id = 1")->fetch(PDO::FETCH_ASSOC);
+                $stmtMPre = $conn->prepare("SELECT * FROM live_match WHERE id = 1");
+                $stmtMPre->execute();
+                $matchPre = $stmtMPre->fetch(PDO::FETCH_ASSOC);
                 $playersPre = [(int)$matchPre['s1_portiere'], (int)$matchPre['s1_attaccante'], (int)$matchPre['s2_portiere'], (int)$matchPre['s2_attaccante']];
 
                 if (!in_array($userId, $playersPre) && !isAdmin($conn)) {
@@ -114,7 +122,9 @@ if ($isLoggedIn && isset($_GET['do'])) {
 
                 $conn->beginTransaction();
                 
-                $match = $conn->query("SELECT * FROM live_match WHERE id = 1 FOR UPDATE")->fetch(PDO::FETCH_ASSOC);
+                $stmtM = $conn->prepare("SELECT * FROM live_match WHERE table_id = ? FOR UPDATE");
+                $stmtM->execute([$tableId]);
+                $match = $stmtM->fetch(PDO::FETCH_ASSOC);
                 $players = [(int)$match['s1_portiere'], (int)$match['s1_attaccante'], (int)$match['s2_portiere'], (int)$match['s2_attaccante']];
 
                 if (in_array(0, $players)) {
@@ -162,10 +172,11 @@ if ($isLoggedIn && isset($_GET['do'])) {
                 awardXP($conn, $lossAttaccante, 50);
                 checkMatchObjectives($conn, $lossAttaccante, false, 'attaccante');
 
-                $conn->prepare("UPDATE live_match_bonuses SET match_id = ?, status = 'used' WHERE match_id = 1 AND status = 'active'")
-                     ->execute([$newMatchId]);
+                $conn->prepare("UPDATE live_match_bonuses SET match_id = ?, status = 'used' WHERE match_id = ? AND status = 'active'")
+                     ->execute([$newMatchId, $match['table_id']]);
 
-                $conn->exec("UPDATE live_match SET s1_portiere=NULL, s1_attaccante=NULL, s2_portiere=NULL, s2_attaccante=NULL, score_s1=0, score_s2=0, data_inizio_match=NULL WHERE id=1");
+                $conn->prepare("UPDATE live_match SET s1_portiere=NULL, s1_attaccante=NULL, s2_portiere=NULL, s2_attaccante=NULL, score_s1=0, score_s2=0, data_inizio_match=NULL, goal_log='' WHERE id=1")
+                     ->execute();
                 $conn->commit();
 
                 
@@ -190,10 +201,15 @@ if (isset($_GET['api'])) {
     try {
         $database = new Database();
         $conn = $database->getConnection();
-        $conn->exec("INSERT IGNORE INTO live_match (id) VALUES (1)");
+        
+        $tableId = (int)($_GET['table'] ?? 1);
+        if ($tableId < 1) $tableId = 1;
+        
+        $conn->prepare("INSERT IGNORE INTO live_match (id, table_id) VALUES (1, NULL)")->execute();
 
         if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-            $stmt = $conn->query("SELECT * FROM live_match WHERE id = 1");
+            $stmt = $conn->prepare("SELECT * FROM live_match WHERE id = 1");
+            $stmt->execute();
             $status = $stmt->fetch(PDO::FETCH_ASSOC); // RESTORED
             $response = ['players' => [], 'active_bonuses' => []];
             $roles = ['s1_portiere', 's1_attaccante', 's2_portiere', 's2_attaccante'];
@@ -220,7 +236,8 @@ if (isset($_GET['api'])) {
             }
 
             // Fetch active bonuses
-            $stmtB = $conn->query("SELECT user_id, item_key FROM live_match_bonuses WHERE match_id = 1 AND status = 'active'");
+            $stmtB = $conn->prepare("SELECT user_id, item_key FROM live_match_bonuses WHERE match_id = ? AND status = 'active'");
+            $stmtB->execute([$status['table_id']]);
             $bonusesRaw = $stmtB->fetchAll(PDO::FETCH_ASSOC);
             foreach($bonusesRaw as $b) {
                 $uid = (int)$b['user_id'];
@@ -228,9 +245,10 @@ if (isset($_GET['api'])) {
                 $response['active_bonuses'][$uid][] = $b['item_key'];
             }
 
-            // Include Scores
+            // Include Scores and Table
             $response['score_s1'] = (int)($status['score_s1'] ?? 0);
             $response['score_s2'] = (int)($status['score_s2'] ?? 0);
+            $response['table_id'] = ($status['table_id'] !== null) ? (int)$status['table_id'] : null;
             
             // Flag for hardware sensors
             $response['is_match_ready'] = (!empty($status['s1_portiere']) && !empty($status['s1_attaccante']) && 
@@ -268,6 +286,8 @@ if (isset($_GET['api'])) {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $input = json_decode(file_get_contents('php://input'), true);
             $action = $input['action'] ?? '';
+            $tableId = (int)($input['table'] ?? ($_GET['table'] ?? 1));
+            if ($tableId < 1) $tableId = 1;
             
             // Allow hardware sensors to bypass login for score updates
             if (!$isLoggedIn && !in_array($action, ['add_goal', 'sub_goal'])) {
@@ -290,7 +310,8 @@ if (isset($_GET['api'])) {
                 
                 // Unique Guest Check
                 if ($targetId === GHOST_ID) {
-                    $stmtCount = $conn->query("SELECT COUNT(*) FROM live_match WHERE (s1_portiere=9999 OR s1_attaccante=9999 OR s2_portiere=9999 OR s2_attaccante=9999) AND id=1");
+                    $stmtCount = $conn->prepare("SELECT COUNT(*) FROM live_match WHERE (s1_portiere=9999 OR s1_attaccante=9999 OR s2_portiere=9999 OR s2_attaccante=9999)");
+                    $stmtCount->execute();
                     if ($stmtCount->fetchColumn() > 0) {
                          echo json_encode(['success' => false, 'error' => 'Un solo ospite per volta!']);
                          exit();
@@ -299,7 +320,8 @@ if (isset($_GET['api'])) {
 
                 $conn->beginTransaction();
                 
-                $stmtCheck = $conn->query("SELECT $targetCol FROM live_match WHERE id = 1 FOR UPDATE");
+                $stmtCheck = $conn->prepare("SELECT $targetCol FROM live_match WHERE id = 1 FOR UPDATE");
+                $stmtCheck->execute();
                 $occupanteId = $stmtCheck->fetchColumn();
                 if ($occupanteId && $occupanteId != $targetId) {
                     $stmtName = $conn->prepare("SELECT nome FROM giocatori WHERE id = ?");
@@ -311,16 +333,16 @@ if (isset($_GET['api'])) {
                 }
 
                 if ($targetId !== GHOST_ID) {
-                    $conn->exec("UPDATE live_match SET 
-                                 s1_portiere = CASE WHEN s1_portiere = $targetId THEN NULL ELSE s1_portiere END,
-                                 s1_attaccante = CASE WHEN s1_attaccante = $targetId THEN NULL ELSE s1_attaccante END,
-                                 s2_portiere = CASE WHEN s2_portiere = $targetId THEN NULL ELSE s2_portiere END,
-                                 s2_attaccante = CASE WHEN s2_attaccante = $targetId THEN NULL ELSE s2_attaccante END
-                                 WHERE id = 1");
+                    $conn->prepare("UPDATE live_match SET 
+                                 s1_portiere = CASE WHEN s1_portiere = ? THEN NULL ELSE s1_portiere END,
+                                 s1_attaccante = CASE WHEN s1_attaccante = ? THEN NULL ELSE s1_attaccante END,
+                                 s2_portiere = CASE WHEN s2_portiere = ? THEN NULL ELSE s2_portiere END,
+                                 s2_attaccante = CASE WHEN s2_attaccante = ? THEN NULL ELSE s2_attaccante END
+                                 WHERE id = 1")->execute([$targetId, $targetId, $targetId, $targetId]);
                 }
 
-                $stmtSit = $conn->prepare("UPDATE live_match SET $targetCol = ? WHERE id = 1");
-                $stmtSit->execute([$targetId]);
+                $stmtSit = $conn->prepare("UPDATE live_match SET $targetCol = ?, table_id = ? WHERE id = 1");
+                $stmtSit->execute([$targetId, $tableId]);
                 $conn->commit();
 
 
@@ -336,7 +358,9 @@ if (isset($_GET['api'])) {
                 }
 
                 $conn->beginTransaction();
-                $match = $conn->query("SELECT * FROM live_match WHERE id = 1 FOR UPDATE")->fetch(PDO::FETCH_ASSOC);
+                $stmtM = $conn->prepare("SELECT * FROM live_match WHERE id = 1 FOR UPDATE");
+                $stmtM->execute();
+                $match = $stmtM->fetch(PDO::FETCH_ASSOC);
                 
                 $players = [(int)$match['s1_portiere'], (int)$match['s1_attaccante'], (int)$match['s2_portiere'], (int)$match['s2_attaccante']];
                 if (in_array(0, $players)) {
@@ -348,13 +372,24 @@ if (isset($_GET['api'])) {
                 $scoreCol = ($team === 1) ? 'score_s1' : 'score_s2';
                 $currentScore = (int)$match[$scoreCol];
 
+                $goalLog = $match['goal_log'] ?: '';
                 if ($action === 'add_goal') {
                     $newScore = $currentScore + 1;
+                    $goalLog = ($goalLog === '') ? (string)$team : $goalLog . ',' . $team;
                 } else {
                     $newScore = max(0, $currentScore - 1);
+                    if ($goalLog !== '') {
+                        $logArr = explode(',', $goalLog);
+                        // Find the last occurrence of this team and remove it? 
+                        // Actually, sub_goal usually just removes the very last goal regardless of team if it's a correction.
+                        // But here 'team' is passed. Let's assume we remove the last goal of THAT team if possible, 
+                        // or just the last goal in general. Standard sports logic: sub_goal is a 'correction' of the last action.
+                        array_pop($logArr); 
+                        $goalLog = implode(',', $logArr);
+                    }
                 }
 
-                $conn->exec("UPDATE live_match SET $scoreCol = $newScore WHERE id = 1");
+                $conn->prepare("UPDATE live_match SET $scoreCol = ?, goal_log = ? WHERE id = 1")->execute([$newScore, $goalLog]);
 
                 // Check for auto-win (Win at 8, max 2 advantages, golden goal at 10)
                 $s1 = ($team === 1) ? $newScore : (int)$match['score_s1'];
@@ -405,10 +440,12 @@ if (isset($_GET['api'])) {
                     checkMatchObjectives($conn, $lossAttaccante, false, 'attaccante');
 
                     // Handle Bonuses
-                    $conn->prepare("UPDATE live_match_bonuses SET match_id = ?, status = 'used' WHERE match_id = 1 AND status = 'active'")
-                         ->execute([$newMatchId]);
+                    processBets($conn, $winningTeam, $s1, $s2, $goalLog);
+                    $conn->prepare("UPDATE live_match_bonuses SET match_id = ?, status = 'used' WHERE match_id = ? AND status = 'active'")
+                         ->execute([$newMatchId, $match['table_id']]);
 
-                    $conn->exec("UPDATE live_match SET s1_portiere=NULL, s1_attaccante=NULL, s2_portiere=NULL, s2_attaccante=NULL, score_s1=0, score_s2=0, data_inizio_match=NULL WHERE id=1");
+                    $conn->prepare("UPDATE live_match SET s1_portiere=NULL, s1_attaccante=NULL, s2_portiere=NULL, s2_attaccante=NULL, score_s1=0, score_s2=0, data_inizio_match=NULL, goal_log='' WHERE id=1")
+                         ->execute();
                     $conn->commit();
                     
                     echo json_encode(['success' => true, 'match_ended' => true, 'winner' => $winningTeam]);
@@ -421,7 +458,7 @@ if (isset($_GET['api'])) {
             }
 
             elseif ($action === 'reset') {
-                $conn->exec("UPDATE live_match SET s1_portiere=NULL, s1_attaccante=NULL, s2_portiere=NULL, s2_attaccante=NULL, score_s1=0, score_s2=0 WHERE id=1");
+                $conn->prepare("UPDATE live_match SET s1_portiere=NULL, s1_attaccante=NULL, s2_portiere=NULL, s2_attaccante=NULL, score_s1=0, score_s2=0, goal_log='', table_id=NULL WHERE id=1")->execute();
                 
 
                 echo json_encode(['success' => true]);
@@ -453,9 +490,10 @@ function getEloMedioPesatoOverall($conn) {
     }
     return ($totalMatches == 0) ? 1500 : round($weightedSum / $totalMatches);
 }
-function aggiornaEloEStatistiche($conn, $dati) {
-    // 1. Fetch Active Bonuses for Match 1
-    $stmtB = $conn->query("SELECT user_id, item_key FROM live_match_bonuses WHERE match_id = 1 AND status = 'active'");
+function aggiornaEloEStatistiche($conn, $dati, $tableId = 1) {
+    // 1. Fetch Active Bonuses for Match tableId
+    $stmtB = $conn->prepare("SELECT user_id, item_key FROM live_match_bonuses WHERE match_id = ? AND status = 'active'");
+    $stmtB->execute([$tableId]);
     $bonuses = $stmtB->fetchAll(PDO::FETCH_GROUP | PDO::FETCH_COLUMN); 
     // Format: [user_id => ['x2_elo', ...]]
 
