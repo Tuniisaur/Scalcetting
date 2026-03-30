@@ -227,10 +227,19 @@ $conn = $db->getConnection();
     <div class="bg-glow-blur bg-red-500 bottom-[-200px] right-[-200px]"></div>
 
     <!-- Top Bar -->
-    <div class="fixed top-0 left-0 right-0 h-16 md:h-20 flex items-center justify-center p-6 z-30 pointer-events-none">
-        <div id="status-indicator" class="flex items-center gap-2 bg-white/40 backdrop-blur-md px-4 py-2 rounded-full border border-black/5 shadow-sm">
-            <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-            <span class="text-[10px] uppercase font-black tracking-widest text-slate-500">Connesso</span>
+    <div class="fixed top-0 left-0 right-0 h-16 md:h-20 flex items-center justify-between px-6 md:px-12 z-40">
+        <div id="status-indicator" class="flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-sm pointer-events-none">
+            <div class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.8)]"></div>
+            <span class="text-[9px] uppercase font-black tracking-widest text-white/60">Live Connected</span>
+        </div>
+
+        <div id="table-indicator-badge" class="flex items-center gap-2 bg-indigo-500/20 backdrop-blur-md px-4 py-2 rounded-xl border border-indigo-500/30 shadow-lg shadow-indigo-500/10 opacity-0 transition-opacity duration-500 pointer-events-none">
+            <span class="material-symbols-outlined text-[18px] text-indigo-400">table_bar</span>
+            <span class="text-[10px] uppercase font-black tracking-widest text-indigo-100">Caricamento Tavolo...</span>
+        </div>
+
+        <div class="hidden md:flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-sm pointer-events-none">
+            <span class="text-[9px] uppercase font-black tracking-widest text-white/60" id="current-time">00:00</span>
         </div>
     </div>
     
@@ -378,8 +387,12 @@ $conn = $db->getConnection();
     </div>
 
     <script>
-        const LIVE_API_URL = 'live.php?api=1';
+        const urlParams = new URLSearchParams(window.location.search);
+        const tableId = urlParams.get('table') || '1';
+        const LIVE_API_URL = `live.php?api=1&table=${tableId}`;
+        
         let currentState = {
+            tableId: tableId,
             scoreS1: 0,
             scoreS2: 0,
             filledCount: 0,
@@ -489,6 +502,20 @@ $conn = $db->getConnection();
             if (s2 < currentState.scoreS2) addLog(`Gol annullato Squadra Rossa`, 'system');
             
             currentState.filledCount = filledCount;
+
+            // Update Table Indicator & Clock
+            const tableId = data.table_id || 1;
+            const tableName = tableId == 1 ? "Calcetto Tuni" : "Calcetto Margot";
+            const tBadge = document.getElementById('table-indicator-badge');
+            if (tBadge) {
+                tBadge.querySelector('span:last-child').textContent = tableName;
+                tBadge.classList.replace('opacity-0', 'opacity-100');
+            }
+            const timeEl = document.getElementById('current-time');
+            if (timeEl) {
+                const now = new Date();
+                timeEl.textContent = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+            }
             
             // Win Handling
             if (data.recent_match && parseInt(data.recent_match.id) !== lastAnimatedMatchId && !document.getElementById('match-over-state').classList.contains('opacity-100')) {
@@ -531,6 +558,7 @@ $conn = $db->getConnection();
                 el.classList.add('animate-score-hit');
             }
         }
+
 
         function showMatchOver(data) {
             const rm = data.recent_match;
@@ -617,7 +645,7 @@ $conn = $db->getConnection();
                 const res = await fetch(LIVE_API_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: action, team: team })
+                    body: JSON.stringify({ action: action, team: team, table: tableId })
                 });
                 if (res.ok) await fetchLiveStatus();
                 btn.disabled = false;
