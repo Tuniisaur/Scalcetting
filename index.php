@@ -73,6 +73,9 @@ $isLoggedIn = isset($_SESSION['user_id']);
 $userId = $_SESSION['user_id'] ?? 0;
 $userNome = $_SESSION['user_nome'] ?? 'Ospite';
 
+$tableId = (int)($_GET['table'] ?? 1);
+if ($tableId < 1) $tableId = 1;
+
 if ($isLoggedIn && isset($_GET['do'])) {
     try {
         $database = new Database();
@@ -88,52 +91,56 @@ if ($isLoggedIn && isset($_GET['do'])) {
                 $targetId = ($action === 'sit_guest') ? GHOST_ID : $userId;
 
                 if ($targetId === GHOST_ID) {
-                    $stmtCount = $conn->query("SELECT COUNT(*) FROM live_match WHERE (s1_portiere=9999 OR s1_attaccante=9999 OR s2_portiere=9999 OR s2_attaccante=9999) AND id=1");
+                    $stmtCount = $conn->prepare("SELECT COUNT(*) FROM live_match WHERE (s1_portiere=9999 OR s1_attaccante=9999 OR s2_portiere=9999 OR s2_attaccante=9999)");
+                    $stmtCount->execute();
                     if ($stmtCount->fetchColumn() > 0) {
-                        header("Location: index.php?error=Un solo ospite per volta!");
+                        header("Location: index.php?error=Un solo ospite per volta!&table=$tableId");
                         exit();
                     }
                 }
 
                 $conn->beginTransaction();
-                $stmtCheck = $conn->query("SELECT $targetCol FROM live_match WHERE id = 1 FOR UPDATE");
+                $stmtCheck = $conn->prepare("SELECT $targetCol FROM live_match WHERE id = 1 FOR UPDATE");
+                $stmtCheck->execute();
                 $occupanteId = $stmtCheck->fetchColumn();
 
                 if (!$occupanteId || $occupanteId == $targetId) {
                     if ($targetId !== GHOST_ID) {
 
-                        $conn->exec("UPDATE live_match SET 
-                                     s1_portiere = CASE WHEN s1_portiere = $targetId THEN NULL ELSE s1_portiere END,
-                                     s1_attaccante = CASE WHEN s1_attaccante = $targetId THEN NULL ELSE s1_attaccante END,
-                                     s2_portiere = CASE WHEN s2_portiere = $targetId THEN NULL ELSE s2_portiere END,
-                                     s2_attaccante = CASE WHEN s2_attaccante = $targetId THEN NULL ELSE s2_attaccante END
-                                     WHERE id = 1");
+                        $conn->prepare("UPDATE live_match SET 
+                                     s1_portiere = CASE WHEN s1_portiere = ? THEN NULL ELSE s1_portiere END,
+                                     s1_attaccante = CASE WHEN s1_attaccante = ? THEN NULL ELSE s1_attaccante END,
+                                     s2_portiere = CASE WHEN s2_portiere = ? THEN NULL ELSE s2_portiere END,
+                                     s2_attaccante = CASE WHEN s2_attaccante = ? THEN NULL ELSE s2_attaccante END
+                                     WHERE id = 1")->execute([$targetId, $targetId, $targetId, $targetId]);
                     }
-                    $stmtSit = $conn->prepare("UPDATE live_match SET $targetCol = ? WHERE id = 1");
-                    $stmtSit->execute([$targetId]);
+                    $stmtSit = $conn->prepare("UPDATE live_match SET $targetCol = ?, table_id = ? WHERE id = 1");
+                    $stmtSit->execute([$targetId, $tableId]);
 
-                    $chk = $conn->query("SELECT s1_portiere, s1_attaccante, s2_portiere, s2_attaccante FROM live_match WHERE id=1")->fetch();
+                    $stmtChk = $conn->prepare("SELECT s1_portiere, s1_attaccante, s2_portiere, s2_attaccante FROM live_match WHERE id = 1");
+                    $stmtChk->execute();
+                    $chk = $stmtChk->fetch();
                     if ($chk['s1_portiere'] && $chk['s1_attaccante'] && $chk['s2_portiere'] && $chk['s2_attaccante']) {
-                        $conn->exec("UPDATE live_match SET data_inizio_match = NOW() WHERE id = 1 AND data_inizio_match IS NULL");
+                        $conn->prepare("UPDATE live_match SET data_inizio_match = NOW() WHERE id = 1 AND data_inizio_match IS NULL")->execute();
                     }
                     else {
-                        $conn->exec("UPDATE live_match SET data_inizio_match = NULL WHERE id = 1");
+                        $conn->prepare("UPDATE live_match SET data_inizio_match = NULL WHERE id = 1")->execute();
                     }
 
                     $conn->commit();
-                    header("Location: index.php");
+                    header("Location: index.php?table=$tableId");
                     exit();
                 }
                 else {
                     $conn->rollBack();
-                    header("Location: index.php?error=Posto occupato");
+                    header("Location: index.php?error=Posto occupato&table=$tableId");
                     exit();
                 }
             }
         }
         elseif ($action === 'reset') {
-            $conn->exec("UPDATE live_match SET s1_portiere=NULL, s1_attaccante=NULL, s2_portiere=NULL, s2_attaccante=NULL, data_inizio_match=NULL WHERE id=1");
-            header("Location: index.php");
+            $conn->prepare("UPDATE live_match SET s1_portiere=NULL, s1_attaccante=NULL, s2_portiere=NULL, s2_attaccante=NULL, score_s1=0, score_s2=0, data_inizio_match=NULL WHERE id=1")->execute();
+            header("Location: index.php?table=$tableId");
             exit();
         }
         elseif ($action === 'win') {
@@ -141,16 +148,17 @@ if ($isLoggedIn && isset($_GET['do'])) {
             $confirm = $_GET['confirm'] ?? 'no';
 
             if ($winningTeam === 1 || $winningTeam === 2) {
-
-                $matchPre = $conn->query("SELECT * FROM live_match WHERE id = 1")->fetch(PDO::FETCH_ASSOC);
+                $stmtMPre = $conn->prepare("SELECT * FROM live_match WHERE id = 1");
+                $stmtMPre->execute();
+                $matchPre = $stmtMPre->fetch(PDO::FETCH_ASSOC);
                 $playersPre = [(int)$matchPre['s1_portiere'], (int)$matchPre['s1_attaccante'], (int)$matchPre['s2_portiere'], (int)$matchPre['s2_attaccante']];
 
                 if (!in_array($userId, $playersPre) && !isAdmin($conn)) {
-                    header("Location: index.php?error=Non sei in partita!");
+                    header("Location: index.php?error=Non sei in partita!&table=$tableId");
                     exit();
                 }
                 if (in_array(0, $playersPre)) {
-                    header("Location: index.php?error=Partita incompleta");
+                    header("Location: index.php?error=Partita incompleta&table=$tableId");
                     exit();
                 }
 
@@ -189,7 +197,7 @@ if ($isLoggedIn && isset($_GET['do'])) {
                         </style>
                     </head>
                     <body class="bg-gray-100 min-h-screen flex items-center justify-center">
-                        <iframe id="webapp-bg" src="index.php"></iframe>
+                        <iframe id="webapp-bg" src="index.php?table=<?php echo $tableId; ?>"></iframe>
                         <div class="fixed inset-0 z-50 flex items-center justify-center bg-white/40 backdrop-blur-md">
                             <div class="bg-white p-8 rounded-[2rem] w-[90%] max-w-sm shadow-2xl border border-white transform transition-all scale-100 text-center">
                                 <div class="h-20 w-20 bg-yellow-50 text-yellow-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm border border-yellow-100">
@@ -199,9 +207,9 @@ if ($isLoggedIn && isset($_GET['do'])) {
                                 <p class="text-slate-500 mb-8 font-medium">Confermi la vittoria della squadra <span style="color: <?php echo $teamColor; ?>; font-weight: 800;"><?php echo $teamName; ?></span>?</p>
 
                                 <div class="flex flex-col gap-3">
-                                    <a href="index.php?do=win&team=<?php echo $winningTeam; ?>&confirm=yes&deuce=no" class="w-full py-4 rounded-2xl bg-green-500 text-white font-black hover:bg-green-600 transition-all shadow-lg shadow-green-500/20 text-center no-underline text-sm uppercase tracking-widest">Conferma</a>
-                                    <a href="index.php?do=win&team=<?php echo $winningTeam; ?>&confirm=yes&deuce=yes" class="w-full py-4 rounded-2xl bg-orange-500 text-white font-black hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/20 text-center no-underline text-sm uppercase tracking-widest">Ai Vantaggi</a>
-                                    <a href="index.php" class="w-full py-4 rounded-2xl bg-slate-100 text-slate-500 font-bold hover:bg-slate-200 transition-all text-center no-underline text-sm uppercase tracking-widest">Annulla</a>
+                                    <a href="index.php?do=win&team=<?php echo $winningTeam; ?>&confirm=yes&deuce=no&table=<?php echo $tableId; ?>" class="w-full py-4 rounded-2xl bg-green-500 text-white font-black hover:bg-green-600 transition-all shadow-lg shadow-green-500/20 text-center no-underline text-sm uppercase tracking-widest">Conferma</a>
+                                    <a href="index.php?do=win&team=<?php echo $winningTeam; ?>&confirm=yes&deuce=yes&table=<?php echo $tableId; ?>" class="w-full py-4 rounded-2xl bg-orange-500 text-white font-black hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/20 text-center no-underline text-sm uppercase tracking-widest">Ai Vantaggi</a>
+                                    <a href="index.php?table=<?php echo $tableId; ?>" class="w-full py-4 rounded-2xl bg-slate-100 text-slate-500 font-bold hover:bg-slate-200 transition-all text-center no-underline text-sm uppercase tracking-widest">Annulla</a>
                                 </div>
                             </div>
                         </div>
@@ -214,21 +222,23 @@ if ($isLoggedIn && isset($_GET['do'])) {
 
                 $conn->beginTransaction();
 
-                $match = $conn->query("SELECT * FROM live_match WHERE id = 1 FOR UPDATE")->fetch(PDO::FETCH_ASSOC);
+                $stmtM = $conn->prepare("SELECT * FROM live_match WHERE id = 1 FOR UPDATE");
+                $stmtM->execute();
+                $match = $stmtM->fetch(PDO::FETCH_ASSOC);
                 $players = [(int)$match['s1_portiere'], (int)$match['s1_attaccante'], (int)$match['s2_portiere'], (int)$match['s2_attaccante']];
 
                 if (in_array(0, $players)) {
                     $conn->rollBack();
-                    header("Location: index.php?error=Qualcuno si è alzato nel frattempo!");
+                    header("Location: index.php?error=Qualcuno si è alzato nel frattempo!&table=$tableId");
                     exit();
                 }
 
                 $dataCorrente = date('Y-m-d H:i:s');
                 $stmtStagione = $conn->query("SELECT id FROM stagioni WHERE is_active = 1 LIMIT 1");
                 $activeSeasonId = $stmtStagione->fetchColumn() ?: 1;
-                $sql = "INSERT INTO partite (squadra1_portiere, squadra1_attaccante, squadra2_portiere, squadra2_attaccante, vincitore, data, stagione_id) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                $sql = "INSERT INTO partite (squadra1_portiere, squadra1_attaccante, squadra2_portiere, squadra2_attaccante, vincitore, data, stagione_id, table_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
                 $stmt = $conn->prepare($sql);
-                $stmt->execute([$players[0], $players[1], $players[2], $players[3], $winningTeam, $dataCorrente, $activeSeasonId]);
+                $stmt->execute([$players[0], $players[1], $players[2], $players[3], $winningTeam, $dataCorrente, $activeSeasonId, (int)$match['table_id']]);
 
                 $matchId = $conn->lastInsertId();
                 $deltas = aggiornaEloEStatistiche($conn, [
@@ -243,11 +253,10 @@ if ($isLoggedIn && isset($_GET['do'])) {
                 $pWin = ($winningTeam == 1) ? [$players[0], $players[1]] : [$players[2], $players[3]];
                 $pLoss = ($winningTeam == 1) ? [$players[2], $players[3]] : [$players[0], $players[1]];
                 awardMatchCredits($conn, $pWin, $pLoss);
+                processBets($conn, $winningTeam, (int)($match['score_s1'] ?? 0), (int)($match['score_s2'] ?? 0), $match['goal_log'] ?? '');
 
-                processBets($conn, $winningTeam);
-
-                $conn->prepare("UPDATE live_match_bonuses SET match_id = ?, status = 'used' WHERE match_id = 1 AND status = 'active'")
-                    ->execute([$matchId]);
+                $conn->prepare("UPDATE live_match_bonuses SET match_id = ?, status = 'used' WHERE match_id = ? AND status = 'active'")
+                    ->execute([$matchId, $tableId]);
 
                 // Season Pass XP & Objectives
                 $winPortiere = $pWin[0];
@@ -267,10 +276,10 @@ if ($isLoggedIn && isset($_GET['do'])) {
                 awardXP($conn, $lossAttaccante, 50);
                 checkMatchObjectives($conn, $lossAttaccante, false, 'attaccante');
 
-                $conn->exec("UPDATE live_match SET s1_portiere=NULL, s1_attaccante=NULL, s2_portiere=NULL, s2_attaccante=NULL, score_s1=0, score_s2=0, data_inizio_match=NULL WHERE id=1");
+                $conn->prepare("UPDATE live_match SET s1_portiere=NULL, s1_attaccante=NULL, s2_portiere=NULL, s2_attaccante=NULL, score_s1=0, score_s2=0, data_inizio_match=NULL WHERE id=1")->execute();
                 $conn->commit();
 
-                header("Location: index.php?msg=Vittoria registrata!");
+                header("Location: index.php?msg=Vittoria registrata!&table=$tableId");
                 exit();
             }
         }
@@ -279,7 +288,7 @@ if ($isLoggedIn && isset($_GET['do'])) {
     catch (Exception $e) {
         if (isset($conn) && $conn->inTransaction())
             $conn->rollBack();
-        header("Location: index.php?error=" . urlencode($e->getMessage()));
+        header("Location: index.php?error=" . urlencode($e->getMessage()) . "&table=$tableId");
         exit();
     }
 }
@@ -308,7 +317,7 @@ function getEloMedioPesatoOverall($conn)
     return ($totalMatches == 0) ? 1500 : round($weightedSum / $totalMatches);
 }
 
-function aggiornaEloEStatistiche($conn, $dati)
+function aggiornaEloEStatistiche($conn, $dati, $tableId = 1)
 {
     $eloFantasma = getEloMedioPesatoOverall($conn);
     $ids = array_merge($dati['squadra1'], $dati['squadra2']);
@@ -332,7 +341,8 @@ function aggiornaEloEStatistiche($conn, $dati)
     $res1 = $dati['vincitore'] == 1 ? 1 : 0;
     $res2 = $dati['vincitore'] == 2 ? 1 : 0;
 
-    $stmtB = $conn->query("SELECT user_id, item_key FROM live_match_bonuses WHERE match_id = 1 AND status = 'active'");
+    $stmtB = $conn->prepare("SELECT user_id, item_key FROM live_match_bonuses WHERE match_id = ? AND status = 'active'");
+    $stmtB->execute();
     $bonuses = $stmtB->fetchAll(PDO::FETCH_GROUP | PDO::FETCH_COLUMN);
 
     $getMult = function ($id) use ($bonuses) {
@@ -395,10 +405,15 @@ if (isset($_GET['api'])) {
     try {
         $database = new Database();
         $conn = $database->getConnection();
-        $conn->exec("INSERT IGNORE INTO live_match (id) VALUES (1)");
+        
+        $tableId = (int)($_GET['table'] ?? 1);
+        if ($tableId < 1) $tableId = 1;
+        
+        $conn->prepare("INSERT IGNORE INTO live_match (id, table_id) VALUES (1, 1)")->execute();
 
         if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-            $stmt = $conn->query("SELECT * FROM live_match WHERE id = 1");
+            $stmt = $conn->prepare("SELECT * FROM live_match WHERE id = 1");
+            $stmt->execute();
             $status = $stmt->fetch(PDO::FETCH_ASSOC);
             $response = [];
             $roles = ['s1_portiere', 's1_attaccante', 's2_portiere', 's2_attaccante'];
@@ -430,6 +445,9 @@ if (isset($_GET['api'])) {
 
             $input = json_decode(file_get_contents('php://input'), true);
             $action = $input['action'] ?? '';
+            $tableId = (int)($input['table'] ?? ($_GET['table'] ?? 1));
+            if ($tableId < 1) $tableId = 1;
+            
             $playerId = $userId;
 
             if ($action === 'sit') {
@@ -446,7 +464,8 @@ if (isset($_GET['api'])) {
 
                 $conn->beginTransaction();
 
-                $stmtCheck = $conn->query("SELECT $targetCol FROM live_match WHERE id = 1 FOR UPDATE");
+                $stmtCheck = $conn->prepare("SELECT $targetCol FROM live_match WHERE id = 1 FOR UPDATE");
+                $stmtCheck->execute();
                 $occupanteId = $stmtCheck->fetchColumn();
                 if ($occupanteId && $occupanteId != $targetId) {
                     $stmtName = $conn->prepare("SELECT nome FROM giocatori WHERE id = ?");
@@ -458,23 +477,25 @@ if (isset($_GET['api'])) {
                 }
 
                 if ($targetId !== GHOST_ID) {
-                    $conn->exec("UPDATE live_match SET 
-                                 s1_portiere = CASE WHEN s1_portiere = $targetId THEN NULL ELSE s1_portiere END,
-                                 s1_attaccante = CASE WHEN s1_attaccante = $targetId THEN NULL ELSE s1_attaccante END,
-                                 s2_portiere = CASE WHEN s2_portiere = $targetId THEN NULL ELSE s2_portiere END,
-                                 s2_attaccante = CASE WHEN s2_attaccante = $targetId THEN NULL ELSE s2_attaccante END
-                                 WHERE id = 1");
+                    $conn->prepare("UPDATE live_match SET 
+                                 s1_portiere = CASE WHEN s1_portiere = ? THEN NULL ELSE s1_portiere END,
+                                 s1_attaccante = CASE WHEN s1_attaccante = ? THEN NULL ELSE s1_attaccante END,
+                                 s2_portiere = CASE WHEN s2_portiere = ? THEN NULL ELSE s2_portiere END,
+                                 s2_attaccante = CASE WHEN s2_attaccante = ? THEN NULL ELSE s2_attaccante END
+                                 WHERE id = 1")->execute([$targetId, $targetId, $targetId, $targetId]);
                 }
 
-                $stmtSit = $conn->prepare("UPDATE live_match SET $targetCol = ? WHERE id = 1");
-                $stmtSit->execute([$targetId]);
+                $stmtSit = $conn->prepare("UPDATE live_match SET $targetCol = ?, table_id = ? WHERE id = 1");
+                $stmtSit->execute([$targetId, $tableId]);
 
-                $chk = $conn->query("SELECT s1_portiere, s1_attaccante, s2_portiere, s2_attaccante FROM live_match WHERE id=1")->fetch();
+                $stmtChk = $conn->prepare("SELECT s1_portiere, s1_attaccante, s2_portiere, s2_attaccante FROM live_match WHERE id = 1");
+                $stmtChk->execute();
+                $chk = $stmtChk->fetch();
                 if ($chk['s1_portiere'] && $chk['s1_attaccante'] && $chk['s2_portiere'] && $chk['s2_attaccante']) {
-                    $conn->exec("UPDATE live_match SET data_inizio_match = NOW() WHERE id = 1 AND data_inizio_match IS NULL");
+                    $conn->prepare("UPDATE live_match SET data_inizio_match = NOW() WHERE id = 1 AND data_inizio_match IS NULL")->execute();
                 }
                 else {
-                    $conn->exec("UPDATE live_match SET data_inizio_match = NULL WHERE id = 1");
+                    $conn->prepare("UPDATE live_match SET data_inizio_match = NULL WHERE id = 1")->execute();
                 }
 
                 $conn->commit();
@@ -485,7 +506,9 @@ if (isset($_GET['api'])) {
             elseif ($action === 'win') {
                 $winningTeam = (int)$input['team'];
                 $conn->beginTransaction();
-                $match = $conn->query("SELECT * FROM live_match WHERE id = 1 FOR UPDATE")->fetch(PDO::FETCH_ASSOC);
+                $stmtM = $conn->prepare("SELECT * FROM live_match WHERE id = 1 FOR UPDATE");
+                $stmtM->execute();
+                $match = $stmtM->fetch(PDO::FETCH_ASSOC);
                 $players = [(int)$match['s1_portiere'], (int)$match['s1_attaccante'], (int)$match['s2_portiere'], (int)$match['s2_attaccante']];
 
                 if (!in_array($playerId, $players) && !isAdmin($conn)) {
@@ -506,7 +529,7 @@ if (isset($_GET['api'])) {
                 $stmt->execute([$players[0], $players[1], $players[2], $players[3], $winningTeam, date('Y-m-d H:i:s'), $activeSeasonId]);
 
                 $matchId = $conn->lastInsertId();
-                $deltas = aggiornaEloEStatistiche($conn, ['squadra1' => [$players[0], $players[1]], 'squadra2' => [$players[2], $players[3]], 'vincitore' => $winningTeam]);
+                $deltas = aggiornaEloEStatistiche($conn, ['squadra1' => [$players[0], $players[1]], 'squadra2' => [$players[2], $players[3]], 'vincitore' => $winningTeam], $tableId);
 
                 $sqlUpd = "UPDATE partite SET elo_delta_s1p=?, elo_delta_s1a=?, elo_delta_s2p=?, elo_delta_s2a=? WHERE id=?";
                 $conn->prepare($sqlUpd)->execute([$deltas['s1p'], $deltas['s1a'], $deltas['s2p'], $deltas['s2a'], $matchId]);
@@ -517,11 +540,10 @@ if (isset($_GET['api'])) {
                 $pWin = ($winningTeam == 1) ? [$players[0], $players[1]] : [$players[2], $players[3]];
                 $pLoss = ($winningTeam == 1) ? [$players[2], $players[3]] : [$players[0], $players[1]];
                 awardMatchCredits($conn, $pWin, $pLoss);
+                processBets($conn, $winningTeam, (int)($match['score_s1'] ?? 0), (int)($match['score_s2'] ?? 0), $match['goal_log'] ?? '');
 
-                processBets($conn, $winningTeam);
-
-                $conn->prepare("UPDATE live_match_bonuses SET match_id = ?, status = 'used' WHERE match_id = 1 AND status = 'active'")
-                    ->execute([$matchId]);
+                $conn->prepare("UPDATE live_match_bonuses SET match_id = ?, status = 'used' WHERE match_id = ? AND status = 'active'")
+                    ->execute([$matchId, $tableId]);
 
                 // Season Pass XP & Objectives
                 $winPortiere = $pWin[0];
@@ -541,7 +563,7 @@ if (isset($_GET['api'])) {
                 awardXP($conn, $lossAttaccante, 50);
                 checkMatchObjectives($conn, $lossAttaccante, false, 'attaccante');
 
-                $conn->exec("UPDATE live_match SET s1_portiere=NULL, s1_attaccante=NULL, s2_portiere=NULL, s2_attaccante=NULL WHERE id=1");
+                $conn->prepare("UPDATE live_match SET s1_portiere=NULL, s1_attaccante=NULL, s2_portiere=NULL, s2_attaccante=NULL WHERE id=1")->execute();
                 $conn->commit();
                 echo json_encode(['success' => true]);
                 exit();
@@ -606,7 +628,7 @@ if (isset($_GET['api'])) {
             }
 
             elseif ($action === 'reset') {
-                $conn->exec("UPDATE live_match SET s1_portiere=NULL, s1_attaccante=NULL, s2_portiere=NULL, s2_attaccante=NULL, data_inizio_match=NULL WHERE id=1");
+                $conn->prepare("UPDATE live_match SET s1_portiere=NULL, s1_attaccante=NULL, s2_portiere=NULL, s2_attaccante=NULL, data_inizio_match=NULL WHERE id=1")->execute();
                 echo json_encode(['success' => true]);
                 exit();
             }
@@ -892,62 +914,85 @@ endif; ?>
                 </header>
 
                 <div class="px-5 mb-8 md:hidden">
-                    <div class="bg-white dark:bg-gray-800 rounded-t-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-
-                        <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center relative">
-                            <div class="flex items-center gap-3">
-                                <h3 class="font-bold text-gray-900 dark:text-gray-100">Live Match</h3>
-                                <div id="liveBountyBanner-mobile" class="hidden bg-gradient-to-r from-yellow-400 to-orange-500 rounded-lg px-2 py-1 shadow-sm flex items-center gap-1 animate-pulse">
-                                    <span class="material-symbols-outlined text-white text-[12px]">target</span>
-                                    <span class="text-white font-black text-[9px] uppercase tracking-widest">Taglia</span>
+                    <div id="live-match-container-mobile" class="bg-white dark:bg-gray-800 rounded-t-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden transition-all duration-300">
+                        <!-- HEADER MOBILE -->
+                        <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50/30 dark:bg-gray-800/30">
+                            <div class="flex flex-col">
+                                <div class="flex items-center gap-2.5">
+                                    <div class="flex items-center gap-1.5 h-6 px-2.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 shrink-0">
+                                        <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
+                                        <span class="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">LIVE</span>
+                                    </div>
+                                    <h3 class="font-black text-gray-900 dark:text-white uppercase tracking-tight text-sm">Match in corso</h3>
+                                    <div id="liveBountyBanner-mobile" class="hidden bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full px-2 py-0.5 shadow-sm flex items-center gap-1 animate-pulse border border-white/20">
+                                        <span class="material-symbols-outlined text-white text-[12px]">target</span>
+                                        <span class="text-white font-black text-[9px] uppercase tracking-widest text-[8px]">TAGLIA</span>
+                                    </div>
+                                </div>
+                                <div id="active-table-mobile" class="flex items-center gap-1 text-[9px] font-black text-indigo-500/70 uppercase tracking-[0.15em] mt-1 opacity-0 transition-opacity duration-300">
+                                    <span class="material-symbols-outlined text-[14px]">table_bar</span>
+                                    <span>TAVOLO --</span>
                                 </div>
                             </div>
-                            <button onclick="resetLiveTable()" class="text-xs text-red-500 hover:text-red-600 font-medium">Reset</button>
+                            <button onclick="resetLiveTable()" class="h-8 px-3 rounded-lg bg-red-50 dark:bg-red-900/10 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/20 transition-all font-black text-[10px] uppercase tracking-widest border border-red-100 dark:border-red-900/20 active:scale-95">Reset</button>
                         </div>
-                        <div class="p-4">
 
-                            <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3 mb-3 border border-blue-100 dark:border-blue-800/50">
-                                <div class="flex justify-between items-center mb-3">
-                                    <div class="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Squadra Blu</div>
-                                    <div class="flex items-center pr-2" id="live-score-container-s1-mobile" style="display: none;">
-                                        <div id="live-score-s1-mobile" class="text-4xl font-black text-blue-600 dark:text-blue-400 w-10 text-center tracking-tighter">0</div>
+                        <div class="p-4 bg-gray-50/20 dark:bg-gray-900/10">
+                            <!-- SQUADRA BLU MOBILE -->
+                            <div class="bg-gradient-to-br from-blue-50 to-indigo-50/50 dark:from-blue-900/10 dark:to-indigo-900/5 rounded-2xl p-4 mb-3 border border-blue-100/50 dark:border-blue-800/30 shadow-sm relative overflow-hidden group">
+                                <div class="absolute -right-4 -bottom-4 h-24 w-24 bg-blue-500/5 rounded-full blur-2xl group-hover:bg-blue-500/10 transition-colors"></div>
+                                
+                                <div class="flex justify-between items-center mb-4 relative z-10">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-1.5 h-4 bg-blue-500 rounded-full"></div>
+                                        <span class="text-[11px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-[0.2em] drop-shadow-sm">Team Blu</span>
+                                    </div>
+                                    <div class="flex items-center" id="live-score-container-s1-mobile" style="display: none;">
+                                        <div id="live-score-s1-mobile" class="text-5xl font-black text-blue-600 dark:text-blue-400 tabular-nums tracking-tighter drop-shadow-md">0</div>
                                     </div>
                                 </div>
-                                <div class="flex gap-2">
-                                    <div id="live-mobile-s1p" class="flex-1 bg-white dark:bg-gray-800 border-2 border-dashed border-blue-200 dark:border-blue-800 rounded-lg p-3 flex flex-col items-center justify-center xl:cursor-pointer xl:hover:border-blue-400 transition-colors min-h-[80px] relative" onclick="sitDown('s1p')">
-                                        <span class="text-2xl mb-1">🥅</span>
-                                        <span class="text-[10px] text-gray-400 font-medium role-label">PORTIERE</span>
-                                        <span class="text-xs font-bold text-gray-700 dark:text-gray-200 player-name truncate w-full text-center">Libero</span>
+
+                                <div class="flex gap-2.5 relative z-10">
+                                    <div id="live-mobile-s1p" class="flex-1 bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-2 border-dashed border-blue-200/50 dark:border-blue-800/40 rounded-xl p-3 flex flex-col items-center justify-center transition-all hover:bg-white dark:hover:bg-gray-800 active:scale-95 h-[105px] relative" onclick="sitDown('s1p')">
+                                        <div class="text-2xl mb-1 drop-shadow-sm">🥅</div>
+                                        <span class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mb-1">Portiere</span>
+                                        <span class="text-[13px] font-black text-gray-800 dark:text-gray-200 player-name truncate w-full text-center leading-relaxed">LIBERO</span>
                                     </div>
-                                    <div id="live-mobile-s1a" class="flex-1 bg-white dark:bg-gray-800 border-2 border-dashed border-blue-200 dark:border-blue-800 rounded-lg p-3 flex flex-col items-center justify-center xl:cursor-pointer xl:hover:border-blue-400 transition-colors min-h-[80px] relative" onclick="sitDown('s1a')">
-                                        <span class="text-2xl mb-1">⚽</span>
-                                        <span class="text-[10px] text-gray-400 font-medium role-label">ATTACCO</span>
-                                        <span class="text-xs font-bold text-gray-700 dark:text-gray-200 player-name truncate w-full text-center">Libero</span>
+                                    <div id="live-mobile-s1a" class="flex-1 bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-2 border-dashed border-blue-200/50 dark:border-blue-800/40 rounded-xl p-3 flex flex-col items-center justify-center transition-all hover:bg-white dark:hover:bg-gray-800 active:scale-95 h-[105px] relative" onclick="sitDown('s1a')">
+                                        <div class="text-2xl mb-1 drop-shadow-sm">⚽</div>
+                                        <span class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mb-1">Attacco</span>
+                                        <span class="text-[13px] font-black text-gray-800 dark:text-gray-200 player-name truncate w-full text-center leading-relaxed">LIBERO</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="bg-red-50 dark:bg-red-900/20 rounded-xl p-3 mb-4 border border-red-100 dark:border-red-800/50">
-                                <div class="flex justify-between items-center mb-3">
-                                    <div class="text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-wider">Squadra Rossa</div>
-                                    <div class="flex items-center pr-2" id="live-score-container-s2-mobile" style="display: none;">
-                                        <div id="live-score-s2-mobile" class="text-4xl font-black text-red-600 dark:text-red-400 w-10 text-center tracking-tighter">0</div>
+                            <!-- SQUADRA ROSSA MOBILE -->
+                            <div class="bg-gradient-to-br from-red-50 to-orange-50/50 dark:from-red-900/10 dark:to-orange-900/5 rounded-2xl p-4 border border-red-100/50 dark:border-red-800/30 shadow-sm relative overflow-hidden group">
+                                <div class="absolute -right-4 -bottom-4 h-24 w-24 bg-red-500/5 rounded-full blur-2xl group-hover:bg-red-500/10 transition-colors"></div>
+
+                                <div class="flex justify-between items-center mb-4 relative z-10">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-1.5 h-4 bg-red-500 rounded-full"></div>
+                                        <span class="text-[11px] font-black text-red-600 dark:text-red-400 uppercase tracking-[0.2em] drop-shadow-sm">Team Rosso</span>
+                                    </div>
+                                    <div class="flex items-center" id="live-score-container-s2-mobile" style="display: none;">
+                                        <div id="live-score-s2-mobile" class="text-5xl font-black text-red-600 dark:text-red-400 tabular-nums tracking-tighter drop-shadow-md">0</div>
                                     </div>
                                 </div>
-                                <div class="flex gap-2">
-                                    <div id="live-mobile-s2a" class="flex-1 bg-white dark:bg-gray-800 border-2 border-dashed border-red-200 dark:border-red-800 rounded-lg p-3 flex flex-col items-center justify-center xl:cursor-pointer xl:hover:border-red-400 transition-colors min-h-[80px] relative" onclick="sitDown('s2a')">
-                                        <span class="text-2xl mb-1">⚽</span>
-                                        <span class="text-[10px] text-gray-400 font-medium role-label">ATTACCO</span>
-                                        <span class="text-xs font-bold text-gray-700 dark:text-gray-200 player-name truncate w-full text-center">Libero</span>
+
+                                <div class="flex gap-2.5 relative z-10">
+                                    <div id="live-mobile-s2p" class="flex-1 bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-2 border-dashed border-red-200/50 dark:border-red-800/40 rounded-xl p-3 flex flex-col items-center justify-center transition-all hover:bg-white dark:hover:bg-gray-800 active:scale-95 h-[105px] relative order-2" onclick="sitDown('s2p')">
+                                        <div class="text-2xl mb-1 drop-shadow-sm">🥅</div>
+                                        <span class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mb-1">Portiere</span>
+                                        <span class="text-[13px] font-black text-gray-800 dark:text-gray-200 player-name truncate w-full text-center leading-relaxed">LIBERO</span>
                                     </div>
-                                    <div id="live-mobile-s2p" class="flex-1 bg-white dark:bg-gray-800 border-2 border-dashed border-red-200 dark:border-red-800 rounded-lg p-3 flex flex-col items-center justify-center xl:cursor-pointer xl:hover:border-red-400 transition-colors min-h-[80px] relative" onclick="sitDown('s2p')">
-                                        <span class="text-2xl mb-1">🥅</span>
-                                        <span class="text-[10px] text-gray-400 font-medium role-label">PORTIERE</span>
-                                        <span class="text-xs font-bold text-gray-700 dark:text-gray-200 player-name truncate w-full text-center">Libero</span>
+                                    <div id="live-mobile-s2a" class="flex-1 bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border-2 border-dashed border-red-200/50 dark:border-red-800/40 rounded-xl p-3 flex flex-col items-center justify-center transition-all hover:bg-white dark:hover:bg-gray-800 active:scale-95 h-[105px] relative order-1" onclick="sitDown('s2a')">
+                                        <div class="text-2xl mb-1 drop-shadow-sm">⚽</div>
+                                        <span class="text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mb-1">Attacco</span>
+                                        <span class="text-[13px] font-black text-gray-800 dark:text-gray-200 player-name truncate w-full text-center leading-relaxed">LIBERO</span>
                                     </div>
                                 </div>
                             </div>
-
                         </div>
                     </div>
 
@@ -966,7 +1011,21 @@ endif; ?>
                         
                         <!-- ACCORDION CONTENT -->
                         <div id="betting-content-mobile" class="overflow-hidden transition-[max-height,opacity] duration-500 ease-in-out max-h-0 opacity-0 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 rounded-b-2xl">
-                            <div class="p-4">
+                            <!-- REDIRECT FOR TABLE 1 -->
+                            <div id="table1-betting-redirect-mobile" class="hidden bg-white dark:bg-gray-800 p-6 flex flex-col items-center justify-center">
+                                <div class="mb-4 h-16 w-16 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-500 rounded-full flex items-center justify-center border-4 border-emerald-50 dark:border-gray-800 shadow-inner">
+                                    <span class="material-symbols-outlined text-3xl animate-pulse">stadium</span>
+                                </div>
+                                <h3 class="font-black text-gray-900 dark:text-white text-lg mb-1 tracking-tight text-center">Partita in Corso sul Tavolo 1</h3>
+                                <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest text-center mb-6">Quote Dinamiche Attive</p>
+                                <button onclick="openLiveBettingModal()" class="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-400 text-white font-black rounded-2xl shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 hover:scale-[1.02] transition-all flex justify-center uppercase tracking-wider items-center gap-2">
+                                    APRI CENTRO SCOMMESSE
+                                    <span class="material-symbols-outlined text-[18px]">open_in_new</span>
+                                </button>
+                            </div>
+
+                            <!-- STANDARD UI FOR TABLE 2 -->
+                            <div id="standard-betting-ui-mobile" class="p-4">
                                 <div class="flex justify-between items-center mb-4">
                                     <div class="flex items-center gap-2">
                                         <button onclick="openOddsExplanationModal()" class="info-btn text-gray-400 hover:text-blue-500 transition-colors flex items-center justify-center p-1 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 gap-1 mt-1">
@@ -980,32 +1039,32 @@ endif; ?>
                                     <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Strisciate: <span id="user-credits-mobile" class="text-primary font-bold">---</span></span>
                                 </div>
 
-                            <div class="mb-4">
-                                <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Puntata</label>
-                                <input type="number" id="bet-amount-mobile" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Quantità" value="10">
-                            </div>
+                                <div class="mb-4">
+                                    <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Puntata</label>
+                                    <input type="number" id="bet-amount-mobile" class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Quantità" value="10">
+                                </div>
 
-                            <div class="grid grid-cols-2 gap-3 mb-4">
-                                <button onclick="placeBet('winner', '1')" class="bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 border border-blue-200 dark:border-blue-800 rounded-xl p-3 flex flex-col items-center transition-colors">
-                                    <span class="text-xs font-bold text-blue-600 dark:text-blue-400">Vince Blu</span>
-                                    <span class="text-lg font-bold text-gray-900 dark:text-white" id="odds-team1-mobile">---</span>
-                                </button>
-                                <button onclick="placeBet('winner', '2')" class="bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 border border-red-200 dark:border-red-800 rounded-xl p-3 flex flex-col items-center transition-colors">
-                                    <span class="text-xs font-bold text-red-600 dark:text-red-400">Vince Rosso</span>
-                                    <span class="text-lg font-bold text-gray-900 dark:text-white" id="odds-team2-mobile">---</span>
-                                </button>
-                            </div>
+                                <div class="grid grid-cols-2 gap-3 mb-4">
+                                    <button onclick="placeBet('winner', '1')" class="bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 border border-blue-200 dark:border-blue-800 rounded-xl p-3 flex flex-col items-center transition-colors">
+                                        <span class="text-xs font-bold text-blue-600 dark:text-blue-400">Vince Blu</span>
+                                        <span class="text-lg font-bold text-gray-900 dark:text-white" id="odds-team1-mobile">---</span>
+                                    </button>
+                                    <button onclick="placeBet('winner', '2')" class="bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 border border-red-200 dark:border-red-800 rounded-xl p-3 flex flex-col items-center transition-colors">
+                                        <span class="text-xs font-bold text-red-600 dark:text-red-400">Vince Rosso</span>
+                                        <span class="text-lg font-bold text-gray-900 dark:text-white" id="odds-team2-mobile">---</span>
+                                    </button>
+                                </div>
 
-                            <div class="grid grid-cols-2 gap-3">
-                                <button onclick="placeBet('deuce', 'yes')" class="bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600 rounded-xl p-3 flex flex-col items-center transition-colors">
-                                    <span class="text-xs font-bold text-gray-500 dark:text-gray-400">Vantaggi? SI</span>
-                                    <span class="text-lg font-bold text-gray-900 dark:text-white" id="odds-deuce-yes-mobile">---</span>
-                                </button>
-                                <button onclick="placeBet('deuce', 'no')" class="bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600 rounded-xl p-3 flex flex-col items-center transition-colors">
-                                    <span class="text-xs font-bold text-gray-500 dark:text-gray-400">Vantaggi? NO</span>
-                                    <span class="text-lg font-bold text-gray-900 dark:text-white" id="odds-deuce-no-mobile">---</span>
-                                </button>
-                            </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <button onclick="placeBet('deuce', 'yes')" class="bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600 rounded-xl p-3 flex flex-col items-center transition-colors">
+                                        <span class="text-xs font-bold text-gray-500 dark:text-gray-400">Vantaggi? SI</span>
+                                        <span class="text-lg font-bold text-gray-900 dark:text-white" id="odds-deuce-yes-mobile">---</span>
+                                    </button>
+                                    <button onclick="placeBet('deuce', 'no')" class="bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600 rounded-xl p-3 flex flex-col items-center transition-colors">
+                                        <span class="text-xs font-bold text-gray-500 dark:text-gray-400">Vantaggi? NO</span>
+                                        <span class="text-lg font-bold text-gray-900 dark:text-white" id="odds-deuce-no-mobile">---</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1077,14 +1136,25 @@ endif; ?>
                     <div class="col-span-12 h-full">
                         <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm h-full flex flex-col">
                             <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center relative">
-                                <div class="flex items-center gap-4">
-                                    <h3 class="font-bold text-gray-900 dark:text-white">Partita Live</h3>
-                                    <div id="liveBountyBanner-desktop" class="hidden bg-gradient-to-r from-yellow-400 to-orange-500 rounded-lg px-2 py-1 shadow-sm flex items-center gap-1 animate-pulse" title="Il capolista sta giocando nel suo ruolo migliore!">
-                                        <span class="material-symbols-outlined text-white text-[12px]">target</span>
-                                        <span class="text-white font-black text-[9px] uppercase tracking-widest">Taglia Attiva</span>
+                                <div class="flex flex-col">
+                                    <div class="flex items-center gap-3">
+                                        <h3 class="font-bold text-gray-900 dark:text-white">Partita Live</h3>
+                                        <div id="liveBountyBanner-desktop" class="hidden bg-gradient-to-r from-yellow-400 to-orange-500 rounded-lg px-3 py-1 shadow-sm flex items-center gap-1.5 animate-pulse">
+                                            <span class="material-symbols-outlined text-white text-[14px]">target</span>
+                                            <span class="text-white font-black text-[10px] uppercase tracking-widest">Taglia sulla Testa</span>
+                                        </div>
+                                    </div>
+                                    <div id="active-table-desktop" class="flex items-center gap-1 text-[10px] font-black text-indigo-500 uppercase tracking-widest mt-1 opacity-0 transition-opacity duration-300">
+                                        <span class="material-symbols-outlined text-[14px]">table_bar</span>
+                                        <span>Tavolo --</span>
                                     </div>
                                 </div>
-                                <button onclick="resetLiveTable()" class="text-xs text-red-500 xl:hover:text-red-700 font-medium px-2 py-1 rounded xl:hover:bg-red-50 dark:xl:hover:bg-red-900/20 transition-colors">Reset</button>
+                                <div class="flex items-center gap-2">
+                                    <button id="liveBountyInfoBtn" onclick="showBountyInfo()" class="hidden h-8 w-8 items-center justify-center rounded-lg bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400 transition-colors xl:hover:bg-yellow-100">
+                                        <span class="material-symbols-outlined text-[20px]">info</span>
+                                    </button>
+                                    <button onclick="resetLiveTable()" class="text-xs text-red-500 xl:hover:text-red-700 font-medium px-2 py-1 rounded xl:hover:bg-red-50 dark:xl:hover:bg-red-900/20 transition-colors">Reset</button>
+                                </div>
                             </div>
                             <div class="flex-1 p-4 flex flex-col gap-4 overflow-y-auto custom-scrollbar relative">
 
@@ -1147,7 +1217,25 @@ endif; ?>
                                 
                                 <!-- ACCORDION CONTENT -->
                                 <div id="betting-content-desktop" class="overflow-hidden transition-[max-height,opacity] duration-500 ease-in-out max-h-0 opacity-0 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 rounded-b-2xl">
-                                    <div class="p-6">
+                                    <!-- REDIRECT FOR TABLE 1 -->
+                                    <div id="table1-betting-redirect-desktop" class="hidden bg-white dark:bg-gray-800 p-8 flex flex-col items-center justify-center">
+                                        <div class="flex items-center gap-6">
+                                            <div class="h-20 w-20 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-500 rounded-full flex items-center justify-center border-4 border-emerald-50 dark:border-gray-800 shadow-inner shrink-0">
+                                                <span class="material-symbols-outlined text-4xl animate-pulse">stadium</span>
+                                            </div>
+                                            <div>
+                                                <h3 class="font-black text-gray-900 dark:text-white text-2xl mb-1 tracking-tight">Partita in Corso: Calcetto Tuni</h3>
+                                                <p class="text-xs text-gray-500 font-bold uppercase tracking-widest mb-4">Le quote si aggiornano ad ogni gol. Punta ora!</p>
+                                                <button onclick="openLiveBettingModal()" class="px-8 py-4 bg-gradient-to-r from-emerald-500 to-teal-400 text-white font-black rounded-2xl shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 hover:scale-[1.02] transition-all flex items-center gap-3 uppercase tracking-wider">
+                                                    Apri Centro Scommesse Live
+                                                    <span class="material-symbols-outlined text-[20px]">open_in_new</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- STANDARD UI FOR TABLE 2 -->
+                                    <div id="standard-betting-ui-desktop" class="p-6">
                                     <div class="flex justify-between items-center mb-6">
                                         <div class="flex items-center gap-3">
                                             <button onclick="openOddsExplanationModal()" class="info-btn text-gray-400 hover:text-blue-500 transition-colors flex items-center gap-2 p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30">
@@ -2040,10 +2128,14 @@ endif; ?>
         let remainingSeconds = 0;
         const BETTING_API = 'betting_api.php';
 
+        // Expose fetchOdds globally for app.js live score triggers
+        window.fetchOdds = fetchOdds;
+
         function startBettingPoll() {
-            fetchOdds(); 
+            fetchOdds(); // Initial fetch
+
             if (bettingPollInterval) clearInterval(bettingPollInterval);
-            bettingPollInterval = setInterval(fetchOdds, 5000); 
+            bettingPollInterval = setInterval(fetchOdds, 10000); // Poll every 10 seconds for consistency
 
             if (countdownInterval) clearInterval(countdownInterval);
             countdownInterval = setInterval(() => {
@@ -2064,17 +2156,18 @@ endif; ?>
 
                 if (data.success && data.status === 'active') {
 
-                    document.getElementById('betting-wrapper-mobile')?.classList.remove('hidden');
+                    const bettingMobile = document.getElementById('betting-wrapper-mobile');
                     const bettingDesktop = document.getElementById('betting-wrapper-desktop');
-                    if (bettingDesktop) {
-                        if (window.innerWidth >= 768) {
-                            bettingDesktop.classList.remove('hidden');
-                        } else {
-                            bettingDesktop.classList.add('hidden');
-                        }
+
+                    if (window.innerWidth < 768) {
+                        bettingMobile?.classList.remove('hidden');
+                        bettingDesktop?.classList.add('hidden');
+                    } else {
+                        bettingMobile?.classList.add('hidden');
+                        bettingDesktop?.classList.remove('hidden');
                     }
 
-                    updateBettingUI(data.odds, data.user_credits);
+                    updateBettingUI(data.odds, data.user_credits, data.suspended || []);
                     if (data.breakdown) {
                         window.currentOddsBreakdown = data.breakdown;
                         if (data.breakdown.divisor) {
@@ -2118,19 +2211,226 @@ endif; ?>
             }
         }
 
-        function updateBettingUI(odds, credits) {
+        let previousOdds = {};
 
-            setText('odds-team1-mobile', odds.team1);
-            setText('odds-team2-mobile', odds.team2);
-            setText('odds-deuce-yes-mobile', odds.deuce_yes);
-            setText('odds-deuce-no-mobile', odds.deuce_no);
+        function updateBettingUI(odds, credits, suspended = []) {
+
+            // Mobile IDs
+            updateOddElement('odds-team1-mobile', odds.team1, 'team1');
+            updateOddElement('odds-team2-mobile', odds.team2, 'team2');
+            updateOddElement('odds-deuce-yes-mobile', odds.deuce_yes, 'deuce_yes');
+            updateOddElement('odds-deuce-no-mobile', odds.deuce_no, 'deuce_no');
             setText('user-credits-mobile', credits);
 
-            setText('odds-team1-desktop', odds.team1);
-            setText('odds-team2-desktop', odds.team2);
-            setText('odds-deuce-yes-desktop', odds.deuce_yes);
-            setText('odds-deuce-no-desktop', odds.deuce_no);
+            // Desktop IDs
+            updateOddElement('odds-team1-desktop', odds.team1, 'team1');
+            updateOddElement('odds-team2-desktop', odds.team2, 'team2');
+            updateOddElement('odds-deuce-yes-desktop', odds.deuce_yes, 'deuce_yes');
+            updateOddElement('odds-deuce-no-desktop', odds.deuce_no, 'deuce_no');
             setText('user-credits-desktop', credits);
+            
+            // Modal IDs (Table 1)
+            updateOddElement('odds-team1-modal', odds.team1, 'team1');
+            updateOddElement('odds-team2-modal', odds.team2, 'team2');
+            updateOddElement('odds-deuce-yes-modal', odds.deuce_yes, 'deuce_yes');
+            updateOddElement('odds-deuce-no-modal', odds.deuce_no, 'deuce_no');
+            setText('user-credits-modal', credits);
+            setText('user-credits-modal-header', credits);
+
+            // Handicap Modal IDs
+            updateOddElement('odds-h1-m05-modal', odds.h1_m05, 'h1_m05');
+            updateOddElement('odds-h2-p05-modal', odds.h2_p05, 'h2_p05');
+            updateOddElement('odds-h1-m15-modal', odds.h1_m15, 'h1_m15');
+            updateOddElement('odds-h2-p15-modal', odds.h2_p15, 'h2_p15');
+            updateOddElement('odds-h1-m25-modal', odds.h1_m25, 'h1_m25');
+            updateOddElement('odds-h2-p25-modal', odds.h2_p25, 'h2_p25');
+            updateOddElement('odds-h1-m35-modal', odds.h1_m35, 'h1_m35');
+            updateOddElement('odds-h2-p35-modal', odds.h2_p35, 'h2_p35');
+
+            updateOddElement('odds-h2-m05-modal', odds.h2_m05, 'h2_m05');
+            updateOddElement('odds-h1-p05-modal', odds.h1_p05, 'h1_p05');
+            updateOddElement('odds-h2-m15-modal', odds.h2_m15, 'h2_m15');
+            updateOddElement('odds-h1-p15-modal', odds.h1_p15, 'h1_p15');
+            updateOddElement('odds-h2-m25-modal', odds.h2_m25, 'h2_m25');
+            updateOddElement('odds-h1-p25-modal', odds.h1_p25, 'h1_p25');
+            updateOddElement('odds-h2-m35-modal', odds.h2_m35, 'h2_m35');
+            updateOddElement('odds-h1-p35-modal', odds.h1_p35, 'h1_p35');
+            setText('user-credits-modal-slip', credits);
+            
+            // Over/Under Modal IDs
+            const ouThresholds = ['85', '95', '105', '115', '125', '135', '145', '155', '165', '175', '185'];
+            ouThresholds.forEach(m => {
+                updateOddElement(`odds-ou${m}o-modal`, odds[`ou${m}_o`], `ou${m}_o`);
+                updateOddElement(`odds-ou${m}u-modal`, odds[`ou${m}_u`], `ou${m}_u`);
+            });
+            
+            // Special Deuce IDs
+            updateOddElement('odds-dw1-modal', odds.dw1, 'dw1');
+            updateOddElement('odds-dw2-modal', odds.dw2, 'dw2');
+            updateOddElement('odds-dp05o-modal', odds.dp05_o, 'dp05_o');
+            updateOddElement('odds-dp05u-modal', odds.dp05_u, 'dp05_u');
+            updateOddElement('odds-dp15o-modal', odds.dp15_o, 'dp15_o');
+            updateOddElement('odds-dp15u-modal', odds.dp15_u, 'dp15_u');
+            
+            // Margin IDs
+            for (let m = 1; m <= 5; m++) {
+                updateOddElement(`odds-mE${m}-modal`, odds[`mE${m}`], `mE${m}`);
+            }
+            updateOddElement('odds-m1_yes-modal', odds.m1_yes, 'm1_yes');
+            updateOddElement('odds-m1_no-modal', odds.m1_no, 'm1_no');
+            updateOddElement('odds-m2p_yes-modal', odds.m2p_yes, 'm2p_yes');
+            updateOddElement('odds-m2p_no-modal', odds.m2p_no, 'm2p_no');
+            updateOddElement('odds-m3p_yes-modal', odds.m3p_yes, 'm3p_yes');
+            updateOddElement('odds-m3p_no-modal', odds.m3p_no, 'm3p_no');
+            
+            // Team Totals & BTTS
+            const tThresholds = ['35', '45', '55', '65', '75'];
+            tThresholds.forEach(m => {
+                updateOddElement(`odds-t1ou${m}o-modal`, odds[`t1ou${m}_o`], `t1ou${m}_o`);
+                updateOddElement(`odds-t1ou${m}u-modal`, odds[`t1ou${m}_u`], `t1ou${m}_u`);
+                updateOddElement(`odds-t2ou${m}o-modal`, odds[`t2ou${m}_o`], `t2ou${m}_o`);
+                updateOddElement(`odds-t2ou${m}u-modal`, odds[`t2ou${m}_u`], `t2ou${m}_u`);
+            });
+            updateOddElement('odds-btts7_y-modal', odds.btts7_y, 'btts7_y');
+            updateOddElement('odds-btts7_n-modal', odds.btts7_n, 'btts7_n');
+            updateOddElement('odds-btts5_y-modal', odds.btts5_y, 'btts5_y');
+            updateOddElement('odds-btts5_n-modal', odds.btts5_n, 'btts5_n');
+
+            // Advanced Special Markets
+            updateOddElement('odds-cappotto_y-modal', odds.cappotto_y, 'cappotto_y');
+            updateOddElement('odds-cappotto_n-modal', odds.cappotto_n, 'cappotto_n');
+            updateOddElement('odds-no_streak3_y-modal', odds.no_streak3_y, 'no_streak3_y');
+            updateOddElement('odds-no_streak3_n-modal', odds.no_streak3_n, 'no_streak3_n');
+            updateOddElement('odds-fgoal_win_y-modal', odds.fgoal_win_y, 'fgoal_win_y');
+            updateOddElement('odds-fgoal_win_n-modal', odds.fgoal_win_n, 'fgoal_win_n');
+            updateOddElement('odds-killer_pt_y-modal', odds.killer_pt_y, 'killer_pt_y');
+            updateOddElement('odds-killer_pt_n-modal', odds.killer_pt_n, 'killer_pt_n');
+            updateOddElement('odds-ribaltone_y-modal', odds.ribaltone_y, 'ribaltone_y');
+            updateOddElement('odds-ribaltone_n-modal', odds.ribaltone_n, 'ribaltone_n');
+            
+            // Suspension Logic
+            const winnerSuspended = suspended.includes('winner');
+            const deuceSuspended = suspended.includes('deuce');
+            
+            // winner buttons (modal)
+            setMarketStatus('btn-bet-modal-w1', winnerSuspended);
+            setMarketStatus('btn-bet-modal-w2', winnerSuspended);
+            // deuce buttons (modal)
+            setMarketStatus('btn-bet-modal-dy', deuceSuspended);
+            setMarketStatus('btn-bet-modal-dn', deuceSuspended);
+            
+            // handicaps
+            if (suspended.includes('handicaps')) {
+                document.querySelectorAll('[id^="btn-handicap-"]').forEach(btn => setMarketStatus(btn.id, true));
+            } else {
+                // Reset all first
+                document.querySelectorAll('[id^="btn-handicap-"]').forEach(btn => setMarketStatus(btn.id, false));
+                // Then suspend specific lines
+                suspended.forEach(key => {
+                    const btn = document.getElementById('btn-bet-modal-' + key.replace('_y', 'y').replace('_n', 'n'));
+                    if (btn) setMarketStatus(btn.id, true);
+                    
+                    if (key.startsWith('h1') || key.startsWith('h2')) {
+                        const parts = key.split('_'); // [h1, m05]
+                        const team = parts[0].replace('h', 's'); // s1 or s2
+                        const val = parts[1]; // m05
+                        setMarketStatus(`btn-handicap-${team}-${val}`, true);
+                        setMarketStatus(`btn-handicap-${team}-${val}-rev`, true);
+                    }
+                    if (key.startsWith('ou')) {
+                        // key: ou85_o -> btn-ou-85-o
+                        const parts = key.split('_'); // [ou85, o]
+                        const m = parts[0].replace('ou', '');
+                        const type = parts[1];
+                        setMarketStatus(`btn-ou-${m}-${type}`, true);
+                    }
+                    if (key.startsWith('dw') || key.startsWith('dp')) {
+                        // dw1, dp05_o etc
+                        const mId = key.replace('_', '');
+                        setMarketStatus(`btn-bet-modal-${mId}`, true);
+                    }
+                    if (key.startsWith('mE')) {
+                        // key: mE1 -> btn-margin-E1
+                        const mId = key.replace('mE', 'E');
+                        setMarketStatus(`btn-margin-${mId}`, true);
+                    }
+                    if (key.startsWith('m1_') || key.startsWith('m2p_') || key.startsWith('m3p_')) {
+                        // key: m1_yes -> btn-diff-1-yes
+                        const parts = key.split('_');
+                        const threshold = parts[0].replace('m', '');
+                        const type = parts[1];
+                        setMarketStatus(`btn-diff-${threshold}-${type}`, true);
+                    }
+                    if (key.startsWith('t1ou') || key.startsWith('t2ou')) {
+                        // key: t1ou35_o -> btn-t1ou-35-o
+                        const parts = key.split('_');
+                        const mId = parts[0].replace('t1ou', 't1ou-').replace('t2ou', 't2ou-');
+                        setMarketStatus(`btn-${mId}-${parts[1]}`, true);
+                    }
+                    if (key.startsWith('btts')) {
+                        // key: btts5_y -> btn-btts-5-y
+                        const parts = key.split('_');
+                        const x = parts[0].replace('btts', '');
+                        setMarketStatus(`btn-btts-${x}-${parts[1]}`, true);
+                    }
+                    if (key.startsWith('es_')) {
+                        // key: es_8-0 -> btn-es-8m0
+                        const score = key.replace('es_', '');
+                        const mId = score.replace('-', 'm');
+                        setMarketStatus(`btn-es-${mId}`, true);
+                    }
+                    if (key.startsWith('cmb_')) {
+                        // key: cmb_s1_o145 -> btn-cmb-s1-o145
+                        const id = key.replace('cmb_', 'cmb-').replace('_', '-');
+                        setMarketStatus(`btn-${id}`, true);
+                    }
+                });
+            }
+
+            // Update Dynamic Odds (Exact Score & Combo)
+            Object.keys(odds).forEach(key => {
+                if (key.startsWith('es_') || key.startsWith('cmb_')) {
+                    updateOddElement(`odds-${key}-modal`, odds[key], key);
+                }
+            });
+            
+            // SYNC Pro Modal Schedina
+            if (typeof updateBetSlipTrigger === 'function') updateBetSlipTrigger();
+            if (typeof updatePotentialWin === 'function') updatePotentialWin();
+
+            previousOdds = { ...odds };
+        }
+        
+        function setMarketStatus(id, isSuspended) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (isSuspended) {
+                el.classList.add('opacity-50', 'grayscale', 'pointer-events-none');
+                el.setAttribute('disabled', 'true');
+            } else {
+                el.classList.remove('opacity-50', 'grayscale', 'pointer-events-none');
+                el.removeAttribute('disabled');
+            }
+        }
+
+        function updateOddElement(id, newValue, key) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            
+            const oldValue = previousOdds[key];
+            if (oldValue !== undefined && newValue != oldValue) {
+                const isUp = parseFloat(newValue) > parseFloat(oldValue);
+                const colorClass = isUp ? '!text-green-500' : '!text-red-500';
+                
+                el.innerText = newValue;
+                el.classList.add('transition-all', 'duration-300', 'scale-125', colorClass);
+                
+                setTimeout(() => {
+                    el.classList.remove('scale-125', colorClass);
+                }, 1500);
+            } else {
+                el.innerText = newValue;
+            }
         }
 
         function setText(id, text) {
@@ -2183,14 +2483,26 @@ endif; ?>
         }
 
         function updateTimerDisplay(seconds) {
-            const text = seconds > 0 ? `Chiude in: ${seconds}s` : "Scommesse Chiuse";
-            const colorClass = seconds > 10 ? 'text-red-500' : 'text-red-600'; 
+            let text = "";
+            let isAlwaysOpen = (typeof tableId !== 'undefined' && tableId == 1);
+
+            if (isAlwaysOpen) {
+                text = ""; // Empty string for Table 1
+            } else {
+                text = seconds > 0 ? `Chiude in: ${seconds}s` : "SCOMMESSE CHIUSE";
+            }
 
             const mob = document.getElementById('betting-timer-mobile');
             const dsk = document.getElementById('betting-timer-desktop');
 
-            if (mob) { mob.innerText = text; mob.className = `text-xs font-bold ${seconds > 0 ? 'text-red-500 animate-pulse' : 'text-gray-400'}`; }
-            if (dsk) { dsk.innerText = text; dsk.className = `font-bold text-xl ${seconds > 0 ? 'text-red-500 animate-pulse' : 'text-gray-400'}`; }
+            if (mob) { 
+                mob.innerText = text; 
+                mob.className = `text-[10px] font-black tracking-tighter ${seconds > 0 ? 'text-green-400 animate-pulse' : 'text-gray-400'}`; 
+            }
+            if (dsk) { 
+                dsk.innerText = text; 
+                dsk.className = `font-black text-2xl tracking-tighter ${seconds > 0 ? 'text-green-400 animate-pulse' : 'text-gray-400'}`; 
+            }
         }
 
         function disableBettingUI() {
@@ -2226,26 +2538,33 @@ endif; ?>
             const content = document.getElementById(`betting-content-${type}`);
             const chev = document.getElementById(`chev-${type === 'mobile' ? 'mob' : 'desk'}`);
             const headerMobile = document.getElementById('betting-header-mobile');
+            const containerMobile = document.getElementById('live-match-container-mobile');
             if (!content || !chev) return;
 
             content.classList.remove('max-h-0', 'opacity-0');
-            content.classList.add('max-h-[1000px]', 'opacity-100'); // Arbitrary large max-height
+            content.classList.add('max-h-[1000px]', 'opacity-100'); 
             chev.classList.add('rotate-180');
-            if (type === 'mobile' && headerMobile) headerMobile.classList.remove('rounded-b-2xl');
+            if (type === 'mobile') {
+                if (headerMobile) headerMobile.classList.remove('rounded-b-2xl');
+                if (containerMobile) containerMobile.classList.remove('shadow-sm');
+            }
         }
 
         function closeAccordion(type) {
             const content = document.getElementById(`betting-content-${type}`);
             const chev = document.getElementById(`chev-${type === 'mobile' ? 'mob' : 'desk'}`);
             const headerMobile = document.getElementById('betting-header-mobile');
+            const containerMobile = document.getElementById('live-match-container-mobile');
             if (!content || !chev) return;
 
             content.classList.remove('max-h-[1000px]', 'opacity-100');
             content.classList.add('max-h-0', 'opacity-0');
             chev.classList.remove('rotate-180');
-            if (type === 'mobile' && headerMobile) {
-                // Return bottom rounding after transition ends
-                setTimeout(() => headerMobile.classList.add('rounded-b-2xl'), 500);
+            if (type === 'mobile') {
+                setTimeout(() => {
+                    if (headerMobile) headerMobile.classList.add('rounded-b-2xl');
+                    if (containerMobile) containerMobile.classList.add('shadow-sm');
+                }, 500);
             }
         }
 
@@ -2414,6 +2733,1071 @@ endif; ?>
         </div>
     </div>
 </div>
+
+<!-- DASHBOARD-THEMED LIVE BETTING CENTER MODAL (Table 1) -->
+<div id="liveBettingModal" class="fixed inset-0 z-[80] hidden" role="dialog" aria-modal="true">
+    <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity opacity-0" id="liveBettingOverlay" onclick="closeLiveBettingModal()"></div>
+    
+    <div class="absolute inset-0 z-10 overflow-hidden flex flex-col">
+        <div class="flex-1 flex flex-col w-full h-full transform transition-all translate-y-full opacity-0 duration-500 ease-out" id="liveBettingPanel">
+            
+            <!-- STICKY HEADER (Coherent with Shop) -->
+            <div class="bg-gradient-to-r from-blue-600 to-indigo-600 pt-10 pb-6 px-5 shadow-xl shadow-blue-500/20 shrink-0 z-30 rounded-b-none">
+                <div class="flex items-center justify-between mb-6">
+                    <button onclick="closeLiveBettingModal()" class="h-10 w-10 flex items-center justify-center rounded-xl bg-white/10 text-white hover:bg-white/20 transition-all backdrop-blur-md border border-white/10">
+                        <span class="material-symbols-outlined text-[20px]">close</span>
+                    </button>
+                    <div class="flex flex-col items-center">
+                        <span class="text-[10px] font-black text-blue-100 uppercase tracking-[0.2em] opacity-80">Live Betting</span>
+                        <h2 class="text-xl font-black text-white leading-none">Centro Tavolo 1</h2>
+                    </div>
+                    <div class="bg-white/10 border border-white/10 px-3 py-1.5 rounded-xl text-white font-bold text-xs flex items-center gap-1.5 shadow-inner backdrop-blur-md">
+                        <span class="material-symbols-outlined text-[16px] text-yellow-400">monetization_on</span>
+                        <span id="user-credits-modal-header">---</span>
+                    </div>
+                </div>
+
+                <!-- Live Scoreboard (Clean Dashboard Style) -->
+                <div class="bg-white/10 backdrop-blur-md border border-white/10 rounded-2xl p-4 flex flex-col gap-4 shadow-inner">
+                    <div class="flex items-center justify-between">
+                        <div class="flex flex-col items-center flex-1">
+                            <div class="text-[9px] font-black text-blue-100 uppercase tracking-widest mb-1 opacity-70">Squadra Blu</div>
+                            <div class="text-3xl font-black text-white tabular-nums drop-shadow-md" id="lb-score-s1">0</div>
+                        </div>
+                        
+                        <div class="flex flex-col items-center px-6">
+                            <div class="flex items-center gap-1.5 bg-red-500/20 px-2 py-0.5 rounded-full border border-red-500/30">
+                                <div class="h-1.5 w-1.5 bg-red-400 rounded-full animate-pulse"></div>
+                                <span class="text-[9px] font-black text-red-100 uppercase tracking-widest leading-none mt-0.5">Live</span>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col items-center flex-1">
+                            <div class="text-[9px] font-black text-red-100 uppercase tracking-widest mb-1 opacity-70">Squadra Rossa</div>
+                            <div class="text-3xl font-black text-white tabular-nums drop-shadow-md" id="lb-score-s2">0</div>
+                        </div>
+                    </div>
+
+                    <!-- Team Members (New) -->
+                    <div class="flex items-center gap-2 border-t border-white/10 pt-3">
+                        <div id="lb-players-s1" class="flex-1 flex flex-col gap-1.5"></div>
+                        <div class="h-8 w-px bg-white/10"></div>
+                        <div id="lb-players-s2" class="flex-1 flex flex-col gap-1.5 items-end"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB NAVIGATION (Coherent with Shop/Season Pass) -->
+            <div class="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700/50 py-3 px-4 flex gap-2 overflow-x-auto no-scrollbar shrink-0 z-20">
+                <button onclick="switchBetCategory('main')" id="tab-bet-main" class="category-tab active rounded-xl">Principali</button>
+                <button onclick="switchBetCategory('handicap')" id="tab-bet-handicap" class="category-tab rounded-xl">Handicap</button>
+                <button onclick="switchBetCategory('goals')" id="tab-bet-goals" class="category-tab rounded-xl">Goal & U/O</button>
+                <button onclick="switchBetCategory('scores')" id="tab-bet-scores" class="category-tab rounded-xl">Risultato</button>
+                <button onclick="switchBetCategory('combo')" id="tab-bet-combo" class="category-tab rounded-xl">Combo</button>
+                <button onclick="switchBetCategory('specials')" id="tab-bet-specials" class="category-tab rounded-xl">Speciali</button>
+            </div>
+
+            <!-- MARKET CONTENT AREA (Light/Dark Coherent) -->
+            <div class="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 pb-40 custom-scrollbar-hidden">
+                
+                <!-- Category: Principali -->
+                <div id="cat-bet-main" class="p-5 space-y-6">
+                    <div class="market-section">
+                        <div class="flex items-center gap-3 mb-4 px-1">
+                            <div class="h-5 w-1 rounded-full bg-blue-500"></div>
+                            <h3 class="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.1em]">Esito Partita</h3>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="selectModalBet('winner', '1')" id="btn-bet-modal-w1" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                <span class="bet-label group-[.selected]:text-white/70">Squadra Blu</span>
+                                <span class="bet-odd group-[.selected]:text-white" id="odds-team1-modal">---</span>
+                            </button>
+                            <button onclick="selectModalBet('winner', '2')" id="btn-bet-modal-w2" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                <span class="bet-label group-[.selected]:text-white/70">Squadra Rossa</span>
+                                <span class="bet-odd group-[.selected]:text-white" id="odds-team2-modal">---</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="market-section">
+                        <div class="flex items-center gap-3 mb-4 px-1">
+                            <div class="h-5 w-1 rounded-full bg-indigo-500"></div>
+                            <h3 class="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.1em]">Andrà ai Vantaggi?</h3>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="selectModalBet('deuce', 'yes')" id="btn-bet-modal-dy" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                <span class="bet-label group-[.selected]:text-white/70">SI</span>
+                                <span class="bet-odd group-[.selected]:text-white" id="odds-deuce-yes-modal">---</span>
+                            </button>
+                            <button onclick="selectModalBet('deuce', 'no')" id="btn-bet-modal-dn" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                <span class="bet-label group-[.selected]:text-white/70">NO</span>
+                                <span class="bet-odd group-[.selected]:text-white" id="odds-deuce-no-modal">---</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Category: Handicap (New) -->
+                <div id="cat-bet-handicap" class="hidden p-5 space-y-6">
+                    <?php 
+                    $handicaps = [
+                        ['val' => '0.5', 'm' => '05'],
+                        ['val' => '1.5', 'm' => '15'],
+                        ['val' => '2.5', 'm' => '25'],
+                        ['val' => '3.5', 'm' => '35']
+                    ];
+                    foreach($handicaps as $h): ?>
+                    <div class="market-section">
+                        <div class="flex items-center gap-3 mb-4 px-1">
+                            <div class="h-5 w-1 rounded-full bg-emerald-500"></div>
+                            <h3 class="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.1em]">Handicap <?= $h['val'] ?></h3>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <!-- Side 1: Team 1 -H vs Team 2 +H -->
+                            <button onclick="selectModalBet('handicap', 's1_-<?= $h['val'] ?>')" id="btn-handicap-s1-m<?= $h['m'] ?>" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                <span class="bet-label group-[.selected]:text-white/70">Squadra Blu (-<?= $h['val'] ?>)</span>
+                                <span class="bet-odd group-[.selected]:text-white" id="odds-h1-m<?= $h['m'] ?>-modal">---</span>
+                            </button>
+                            <button onclick="selectModalBet('handicap', 's2_+<?= $h['val'] ?>')" id="btn-handicap-s2-p<?= $h['m'] ?>" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                <span class="bet-label group-[.selected]:text-white/70">Squadra Rossa (+<?= $h['val'] ?>)</span>
+                                <span class="bet-odd group-[.selected]:text-white" id="odds-h2-p<?= $h['m'] ?>-modal">---</span>
+                            </button>
+                            
+                            <!-- Side 2: Team 2 -H vs Team 1 +H -->
+                            <button onclick="selectModalBet('handicap', 's2_-<?= $h['val'] ?>')" id="btn-handicap-s2-m<?= $h['m'] ?>-rev" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                <span class="bet-label group-[.selected]:text-white/70">Squadra Rossa (-<?= $h['val'] ?>)</span>
+                                <span class="bet-odd group-[.selected]:text-white" id="odds-h2-m<?= $h['m'] ?>-modal">---</span>
+                            </button>
+                            <button onclick="selectModalBet('handicap', 's1_+<?= $h['val'] ?>')" id="btn-handicap-s1-p<?= $h['m'] ?>-rev" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                <span class="bet-label group-[.selected]:text-white/70">Squadra Blu (+<?= $h['val'] ?>)</span>
+                                <span class="bet-odd group-[.selected]:text-white" id="odds-h1-p<?= $h['m'] ?>-modal">---</span>
+                            </button>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+
+                <!-- Category: Goal & U/O -->
+                <div id="cat-bet-goals" class="hidden p-5 space-y-6">
+                    <div class="market-section">
+                        <div class="flex items-center gap-3 mb-4 px-1">
+                            <div class="h-5 w-1 rounded-full bg-blue-500"></div>
+                            <h3 class="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.1em]">Under / Over Goal Totali</h3>
+                        </div>
+                        <div class="grid grid-cols-2 gap-x-3 gap-y-4">
+                            <?php 
+                            $ouThresholds = ['8.5', '9.5', '10.5', '11.5', '12.5', '13.5', '14.5', '15.5', '16.5', '17.5', '18.5'];
+                            foreach($ouThresholds as $t): 
+                                $m = str_replace('.', '', $t);
+                            ?>
+                            <div class="col-span-2 flex items-center gap-2 py-1">
+                                <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Linea <?= $t ?></span>
+                                <div class="flex-1 h-px bg-gray-200 dark:bg-gray-800"></div>
+                            </div>
+                            <button onclick="selectModalBet('over_under', '<?= $t ?>_under')" id="btn-ou-<?= $m ?>-u" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                <span class="bet-label group-[.selected]:text-white/70">UNDER <?= $t ?></span>
+                                <span class="bet-odd group-[.selected]:text-white" id="odds-ou<?= $m ?>u-modal">---</span>
+                            </button>
+                            <button onclick="selectModalBet('over_under', '<?= $t ?>_over')" id="btn-ou-<?= $m ?>-o" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                <span class="bet-label group-[.selected]:text-white/70">OVER <?= $t ?></span>
+                                <span class="bet-odd group-[.selected]:text-white" id="odds-ou<?= $m ?>o-modal">---</span>
+                            </button>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+
+                    <!-- Scarto e Margine -->
+                    <div class="market-section mt-8">
+                        <div class="flex items-center gap-3 mb-4 px-1">
+                            <div class="h-5 w-1 rounded-full bg-purple-500"></div>
+                            <h3 class="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.1em]">Scarto e Margine Vittoria</h3>
+                        </div>
+                        
+                        <!-- Exact Margins -->
+                        <div class="grid grid-cols-5 gap-2 mb-6">
+                            <?php for($m=1; $m<=5; $m++): ?>
+                            <button onclick="selectModalBet('winning_margin', '<?= $m ?>')" id="btn-margin-E<?= $m ?>" class="bet-card-compact bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group py-3 flex flex-col items-center">
+                                <span class="text-[9px] font-black text-gray-400 group-[.selected]:text-white/70 uppercase mb-1">Esattamente</span>
+                                <span class="text-xs font-black text-gray-900 dark:text-white group-[.selected]:text-white"><?= $m ?> Gol</span>
+                                <div class="h-px w-4 bg-gray-100 dark:bg-gray-700 my-1"></div>
+                                <span class="text-sm font-black text-blue-500 group-[.selected]:text-white" id="odds-mE<?= $m ?>-modal">---</span>
+                            </button>
+                            <?php endfor; ?>
+                        </div>
+
+                        <!-- Difference Thresholds -->
+                        <div class="space-y-3">
+                            <!-- 1 Gol -->
+                            <div class="grid grid-cols-2 gap-3 items-center">
+                                <div class="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-1">Vittoria di 1 Gol?</div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button onclick="selectModalBet('winning_diff', '1_yes')" id="btn-diff-1-yes" class="bet-card-mini bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                        <span class="text-[9px] font-black group-[.selected]:text-white">SI</span>
+                                        <span class="text-xs font-black text-blue-500 group-[.selected]:text-white" id="odds-m1_yes-modal">---</span>
+                                    </button>
+                                    <button onclick="selectModalBet('winning_diff', '1_no')" id="btn-diff-1-no" class="bet-card-mini bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                        <span class="text-[9px] font-black group-[.selected]:text-white">NO</span>
+                                        <span class="text-xs font-black text-blue-500 group-[.selected]:text-white" id="odds-m1_no-modal">---</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <!-- 2+ Gol -->
+                            <div class="grid grid-cols-2 gap-3 items-center">
+                                <div class="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-1">Vittoria 2+ Gol Scarto?</div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button onclick="selectModalBet('winning_diff', '2p_yes')" id="btn-diff-2p-yes" class="bet-card-mini bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                        <span class="text-[9px] font-black group-[.selected]:text-white">SI</span>
+                                        <span class="text-xs font-black text-blue-500 group-[.selected]:text-white" id="odds-m2p_yes-modal">---</span>
+                                    </button>
+                                    <button onclick="selectModalBet('winning_diff', '2p_no')" id="btn-diff-2p-no" class="bet-card-mini bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                        <span class="text-[9px] font-black group-[.selected]:text-white">NO</span>
+                                        <span class="text-xs font-black text-blue-500 group-[.selected]:text-white" id="odds-m2p_no-modal">---</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <!-- 3+ Gol -->
+                            <div class="grid grid-cols-2 gap-3 items-center">
+                                <div class="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-1">Vittoria 3+ Gol Scarto?</div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button onclick="selectModalBet('winning_diff', '3p_yes')" id="btn-diff-3p-yes" class="bet-card-mini bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                        <span class="text-[9px] font-black group-[.selected]:text-white">SI</span>
+                                        <span class="text-xs font-black text-blue-500 group-[.selected]:text-white" id="odds-m3p_yes-modal">---</span>
+                                    </button>
+                                    <button onclick="selectModalBet('winning_diff', '3p_no')" id="btn-diff-3p-no" class="bet-card-mini bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                        <span class="text-[9px] font-black group-[.selected]:text-white">NO</span>
+                                        <span class="text-xs font-black text-blue-500 group-[.selected]:text-white" id="odds-m3p_no-modal">---</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Team Goals & BTTS -->
+                    <div class="space-y-8 mt-8">
+                        <!-- Squadra Blu -->
+                        <div class="market-section">
+                            <div class="flex items-center gap-3 mb-4 px-1">
+                                <div class="h-5 w-1 rounded-full bg-blue-400"></div>
+                                <h3 class="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.1em]">Gol Squadra Blu</h3>
+                            </div>
+                            <div class="grid grid-cols-2 gap-x-3 gap-y-4">
+                                <?php foreach(['3.5', '4.5', '5.5', '6.5', '7.5'] as $t): $m = str_replace('.', '', $t); ?>
+                                <button onclick="selectModalBet('team_over_under', 's1_<?= $t ?>_under')" id="btn-t1ou-<?= $m ?>-u" class="bet-card-mini bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                    <span class="text-[9px] font-black group-[.selected]:text-white">UNDER <?= $t ?></span>
+                                    <span class="text-xs font-black text-blue-500 group-[.selected]:text-white" id="odds-t1ou<?= $m ?>u-modal">---</span>
+                                </button>
+                                <button onclick="selectModalBet('team_over_under', 's1_<?= $t ?>_over')" id="btn-t1ou-<?= $m ?>-o" class="bet-card-mini bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                    <span class="text-[9px] font-black group-[.selected]:text-white">OVER <?= $t ?></span>
+                                    <span class="text-xs font-black text-blue-500 group-[.selected]:text-white" id="odds-t1ou<?= $m ?>o-modal">---</span>
+                                </button>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+
+                        <!-- Squadra Rossa -->
+                        <div class="market-section">
+                            <div class="flex items-center gap-3 mb-4 px-1">
+                                <div class="h-5 w-1 rounded-full bg-red-400"></div>
+                                <h3 class="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.1em]">Gol Squadra Rossa</h3>
+                            </div>
+                            <div class="grid grid-cols-2 gap-x-3 gap-y-4">
+                                <?php foreach(['3.5', '4.5', '5.5', '6.5', '7.5'] as $t): $m = str_replace('.', '', $t); ?>
+                                <button onclick="selectModalBet('team_over_under', 's2_<?= $t ?>_under')" id="btn-t2ou-<?= $m ?>-u" class="bet-card-mini bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                    <span class="text-[9px] font-black group-[.selected]:text-white">UNDER <?= $t ?></span>
+                                    <span class="text-xs font-black text-blue-500 group-[.selected]:text-white" id="odds-t2ou<?= $m ?>u-modal">---</span>
+                                </button>
+                                <button onclick="selectModalBet('team_over_under', 's2_<?= $t ?>_over')" id="btn-t2ou-<?= $m ?>-o" class="bet-card-mini bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                    <span class="text-[9px] font-black group-[.selected]:text-white">OVER <?= $t ?></span>
+                                    <span class="text-xs font-black text-blue-500 group-[.selected]:text-white" id="odds-t2ou<?= $m ?>o-modal">---</span>
+                                </button>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+
+                        <!-- Entrambe segnano X+ -->
+                        <div class="market-section">
+                            <div class="flex items-center gap-3 mb-4 px-1">
+                                <div class="h-5 w-1 rounded-full bg-indigo-500"></div>
+                                <h3 class="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.1em]">Raggiungimento Soglia</h3>
+                            </div>
+                            <div class="space-y-4">
+                                <!-- Soglia 5 -->
+                                <div class="grid grid-cols-2 gap-3 items-center">
+                                    <div class="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-1">Entrambe 5+ Gol?</div>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <button onclick="selectModalBet('btts_threshold', '5_yes')" id="btn-btts-5-y" class="bet-card-mini bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                            <span class="text-[9px] font-black group-[.selected]:text-white">SI</span>
+                                            <span class="text-xs font-black text-blue-500 group-[.selected]:text-white" id="odds-btts5_y-modal">---</span>
+                                        </button>
+                                        <button onclick="selectModalBet('btts_threshold', '5_no')" id="btn-btts-5-n" class="bet-card-mini bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                            <span class="text-[9px] font-black group-[.selected]:text-white">NO</span>
+                                            <span class="text-xs font-black text-blue-500 group-[.selected]:text-white" id="odds-btts5_n-modal">---</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <!-- Soglia 7 -->
+                                <div class="grid grid-cols-2 gap-3 items-center">
+                                    <div class="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-1">Entrambe 7+ Gol?</div>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <button onclick="selectModalBet('btts_threshold', '7_yes')" id="btn-btts-7-y" class="bet-card-mini bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                            <span class="text-[9px] font-black group-[.selected]:text-white">SI</span>
+                                            <span class="text-xs font-black text-blue-500 group-[.selected]:text-white" id="odds-btts7_y-modal">---</span>
+                                        </button>
+                                        <button onclick="selectModalBet('btts_threshold', '7_no')" id="btn-btts-7-n" class="bet-card-mini bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                            <span class="text-[9px] font-black group-[.selected]:text-white">NO</span>
+                                            <span class="text-xs font-black text-blue-500 group-[.selected]:text-white" id="odds-btts7_n-modal">---</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Category: Exact Score -->
+                <div id="cat-bet-scores" class="hidden p-5 space-y-6">
+                    <div class="market-section">
+                        <div class="flex items-center gap-3 mb-6 px-1">
+                            <div class="h-5 w-1 rounded-full bg-blue-500"></div>
+                            <h3 class="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.1em]">Risultato Esatto</h3>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <!-- Colonna Blu Vince -->
+                            <div class="space-y-3">
+                                <div class="text-[9px] font-black text-blue-500 uppercase tracking-widest pl-1 mb-2 text-center bg-blue-50 dark:bg-blue-900/20 py-1 rounded">Blu Vince</div>
+                                <?php 
+                                $esBlu = ["8-0", "8-1", "8-2", "8-3", "8-4", "8-5", "8-6", "9-7", "10-8", "10-9"];
+                                foreach($esBlu as $score): ?>
+                                <button onclick="selectModalBet('exact_score', '<?= $score ?>')" id="btn-es-<?= str_replace('-', 'm', $score) ?>" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group py-3">
+                                    <span class="bet-label group-[.selected]:text-white/70"><?= $score ?></span>
+                                    <span class="bet-odd group-[.selected]:text-white" id="odds-es_<?= $score ?>-modal">---</span>
+                                </button>
+                                <?php endforeach; ?>
+                            </div>
+                            
+                            <!-- Colonna Rossa Vince -->
+                            <div class="space-y-3">
+                                <div class="text-[9px] font-black text-red-500 uppercase tracking-widest pl-1 mb-2 text-center bg-red-50 dark:bg-red-900/20 py-1 rounded">Rossa Vince</div>
+                                <?php 
+                                $esRossa = ["0-8", "1-8", "2-8", "3-8", "4-8", "5-8", "6-8", "7-9", "8-10", "9-10"];
+                                foreach($esRossa as $score): ?>
+                                <button onclick="selectModalBet('exact_score', '<?= $score ?>')" id="btn-es-<?= str_replace('-', 'm', $score) ?>" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group py-3">
+                                    <span class="bet-label group-[.selected]:text-white/70"><?= $score ?></span>
+                                    <span class="bet-odd group-[.selected]:text-white" id="odds-es_<?= $score ?>-modal">---</span>
+                                </button>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Category: Combo Markets -->
+                <div id="cat-bet-combo" class="hidden p-5 space-y-8">
+                    <!-- Combo Totali -->
+                    <div class="market-section">
+                        <div class="flex items-center gap-3 mb-4 px-1">
+                            <div class="h-5 w-1 rounded-full bg-emerald-500"></div>
+                            <h3 class="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.1em]">Combo: Vincente + Totali</h3>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <!-- Blu Column -->
+                            <div class="space-y-2">
+                                <div class="text-[9px] font-black text-blue-500 uppercase text-center pb-1 border-b border-blue-100 dark:border-blue-900/30">Squadra Blu</div>
+                                <?php foreach(['o105','o125','o145','o165','u125','u145'] as $cond): 
+                                    $label = (strpos($cond, 'o') === 0 ? 'OVER' : 'UNDER') . ' ' . (float)substr($cond, 1)/10;
+                                ?>
+                                <button onclick="selectModalBet('combo', 's1_<?= $cond ?>')" id="btn-cmb-s1-<?= $cond ?>" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group py-3">
+                                    <span class="bet-label group-[.selected]:text-white/70">VINCE + <?= $label ?></span>
+                                    <span class="bet-odd group-[.selected]:text-white" id="odds-cmb_s1_<?= $cond ?>-modal">---</span>
+                                </button>
+                                <?php endforeach; ?>
+                            </div>
+                            <!-- Rossa Column -->
+                            <div class="space-y-2">
+                                <div class="text-[9px] font-black text-red-500 uppercase text-center pb-1 border-b border-red-100 dark:border-red-900/30">Squadra Rossa</div>
+                                <?php foreach(['o105','o125','o145','o165','u125','u145'] as $cond): 
+                                    $label = (strpos($cond, 'o') === 0 ? 'OVER' : 'UNDER') . ' ' . (float)substr($cond, 1)/10;
+                                ?>
+                                <button onclick="selectModalBet('combo', 's2_<?= $cond ?>')" id="btn-cmb-s2-<?= $cond ?>" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group py-3">
+                                    <span class="bet-label group-[.selected]:text-white/70">VINCE + <?= $label ?></span>
+                                    <span class="bet-odd group-[.selected]:text-white" id="odds-cmb_s2_<?= $cond ?>-modal">---</span>
+                                </button>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Combo Vantaggi -->
+                    <div class="market-section">
+                        <div class="flex items-center gap-3 mb-4 px-1">
+                            <div class="h-5 w-1 rounded-full bg-amber-500"></div>
+                            <h3 class="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.1em]">Combo: Vincente + Vantaggi</h3>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="space-y-2">
+                                <button onclick="selectModalBet('combo', 's1_vY')" id="btn-cmb-s1-vY" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group py-3">
+                                    <span class="bet-label group-[.selected]:text-white/70">BLU VINCE + VANTAGGI SÌ</span>
+                                    <span class="bet-odd group-[.selected]:text-white" id="odds-cmb_s1_vY-modal">---</span>
+                                </button>
+                                <button onclick="selectModalBet('combo', 's1_vN')" id="btn-cmb-s1-vN" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group py-3">
+                                    <span class="bet-label group-[.selected]:text-white/70">BLU VINCE + VANTAGGI NO</span>
+                                    <span class="bet-odd group-[.selected]:text-white" id="odds-cmb_s1_vN-modal">---</span>
+                                </button>
+                            </div>
+                            <div class="space-y-2">
+                                <button onclick="selectModalBet('combo', 's2_vY')" id="btn-cmb-s2-vY" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group py-3">
+                                    <span class="bet-label group-[.selected]:text-white/70">ROSSA VINCE + VANTAGGI SÌ</span>
+                                    <span class="bet-odd group-[.selected]:text-white" id="odds-cmb_s2_vY-modal">---</span>
+                                </button>
+                                <button onclick="selectModalBet('combo', 's2_vN')" id="btn-cmb-s2-vN" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group py-3">
+                                    <span class="bet-label group-[.selected]:text-white/70">ROSSA VINCE + VANTAGGI NO</span>
+                                    <span class="bet-odd group-[.selected]:text-white" id="odds-cmb_s2_vN-modal">---</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Combo Margine -->
+                    <div class="market-section">
+                        <div class="flex items-center gap-3 mb-4 px-1">
+                            <div class="h-5 w-1 rounded-full bg-violet-500"></div>
+                            <h3 class="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.1em]">Combo: Vincente + Margine</h3>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="space-y-2">
+                                <button onclick="selectModalBet('combo', 's1_m1')" id="btn-cmb-s1-m1" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group py-3">
+                                    <span class="bet-label group-[.selected]:text-white/70">BLU VINCE DI 1 GOL</span>
+                                    <span class="bet-odd group-[.selected]:text-white" id="odds-cmb_s1_m1-modal">---</span>
+                                </button>
+                                <button onclick="selectModalBet('combo', 's1_m2')" id="btn-cmb-s1-m2" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group py-3">
+                                    <span class="bet-label group-[.selected]:text-white/70">BLU VINCE DI 2 GOL</span>
+                                    <span class="bet-odd group-[.selected]:text-white" id="odds-cmb_s1_m2-modal">---</span>
+                                </button>
+                                <button onclick="selectModalBet('combo', 's1_m3')" id="btn-cmb-s1-m3" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group py-3">
+                                    <span class="bet-label group-[.selected]:text-white/70">BLU VINCE DI 3+ GOL</span>
+                                    <span class="bet-odd group-[.selected]:text-white" id="odds-cmb_s1_m3-modal">---</span>
+                                </button>
+                            </div>
+                            <div class="space-y-2">
+                                <button onclick="selectModalBet('combo', 's2_m1')" id="btn-cmb-s2-m1" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group py-3">
+                                    <span class="bet-label group-[.selected]:text-white/70">ROSSA VINCE DI 1 GOL</span>
+                                    <span class="bet-odd group-[.selected]:text-white" id="odds-cmb_s2_m1-modal">---</span>
+                                </button>
+                                <button onclick="selectModalBet('combo', 's2_m2')" id="btn-cmb-s2-m2" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group py-3">
+                                    <span class="bet-label group-[.selected]:text-white/70">ROSSA VINCE DI 2 GOL</span>
+                                    <span class="bet-odd group-[.selected]:text-white" id="odds-cmb_s2_m2-modal">---</span>
+                                </button>
+                                <button onclick="selectModalBet('combo', 's2_m3')" id="btn-cmb-s2-m3" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group py-3">
+                                    <span class="bet-label group-[.selected]:text-white/70">ROSSA VINCE DI 3+ GOL</span>
+                                    <span class="bet-odd group-[.selected]:text-white" id="odds-cmb_s2_m3-modal">---</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Category: Specials (Deuce Focused) -->
+                <div id="cat-bet-specials" class="hidden p-5 space-y-6">
+                    <div class="market-section">
+                        <div class="flex items-center gap-3 mb-4 px-1">
+                            <div class="h-5 w-1 rounded-full bg-amber-500"></div>
+                            <h3 class="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.1em]">Se Vantaggi: Chi Vince?</h3>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="selectModalBet('deuce_winner', '1')" id="btn-bet-modal-dw1" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                <span class="bet-label group-[.selected]:text-white/70">SQUADRA BLU</span>
+                                <span class="bet-odd group-[.selected]:text-white" id="odds-dw1-modal">---</span>
+                            </button>
+                            <button onclick="selectModalBet('deuce_winner', '2')" id="btn-bet-modal-dw2" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                <span class="bet-label group-[.selected]:text-white/70">SQUADRA ROSSA</span>
+                                <span class="bet-odd group-[.selected]:text-white" id="odds-dw2-modal">---</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="market-section">
+                        <div class="flex items-center gap-3 mb-4 px-1">
+                            <div class="h-5 w-1 rounded-full bg-rose-500"></div>
+                            <h3 class="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.1em]">Scambi ai Vantaggi (Oltre 7-7)</h3>
+                        </div>
+                        <div class="grid grid-cols-2 gap-x-3 gap-y-4">
+                            <!-- O/U 0.5 -->
+                            <div class="col-span-2 flex items-center gap-2 py-1">
+                                <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Linea 0.5 (Almeno un 8-8)</span>
+                                <div class="flex-1 h-px bg-gray-200 dark:bg-gray-800"></div>
+                            </div>
+                            <button onclick="selectModalBet('deuce_parity', '0.5_under')" id="btn-bet-modal-dp05u" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                <span class="bet-label group-[.selected]:text-white/70">UNDER 0.5</span>
+                                <span class="bet-odd group-[.selected]:text-white" id="odds-dp05u-modal">---</span>
+                            </button>
+                            <button onclick="selectModalBet('deuce_parity', '0.5_over')" id="btn-bet-modal-dp05o" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                <span class="bet-label group-[.selected]:text-white/70">OVER 0.5</span>
+                                <span class="bet-odd group-[.selected]:text-white" id="odds-dp05o-modal">---</span>
+                            </button>
+
+                            <!-- O/U 1.5 -->
+                            <div class="col-span-2 flex items-center gap-2 py-1 mt-2">
+                                <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Linea 1.5 (Almeno un 9-9)</span>
+                                <div class="flex-1 h-px bg-gray-200 dark:bg-gray-800"></div>
+                            </div>
+                            <button onclick="selectModalBet('deuce_parity', '1.5_under')" id="btn-bet-modal-dp15u" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                <span class="bet-label group-[.selected]:text-white/70">UNDER 1.5</span>
+                                <span class="bet-odd group-[.selected]:text-white" id="odds-dp15u-modal">---</span>
+                            </button>
+                            <button onclick="selectModalBet('deuce_parity', '1.5_over')" id="btn-bet-modal-dp15o" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                <span class="bet-label group-[.selected]:text-white/70">OVER 1.5</span>
+                                <span class="bet-odd group-[.selected]:text-white" id="odds-dp15o-modal">---</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Market: Cappotto -->
+                    <div class="market-section">
+                        <div class="flex items-center gap-3 mb-4 px-1">
+                            <div class="h-5 w-1 rounded-full bg-slate-400"></div>
+                            <h3 class="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.1em]">La Partita termina con un Cappotto? (8-0)</h3>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="selectModalBet('cappotto_yn', 'yes')" id="btn-bet-modal-cappottoy" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                <span class="bet-label group-[.selected]:text-white/70">SI</span>
+                                <span class="bet-odd group-[.selected]:text-white" id="odds-cappotto_y-modal">---</span>
+                            </button>
+                            <button onclick="selectModalBet('cappotto_yn', 'no')" id="btn-bet-modal-cappotton" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                <span class="bet-label group-[.selected]:text-white/70">NO</span>
+                                <span class="bet-odd group-[.selected]:text-white" id="odds-cappotto_n-modal">---</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Market: Streaks -->
+                    <div class="market-section">
+                        <div class="flex items-center gap-3 mb-4 px-1">
+                            <div class="h-5 w-1 rounded-full bg-cyan-500"></div>
+                            <h3 class="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.1em]">Nessuna squadra segna 3+ gol consecutivi?</h3>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="selectModalBet('consecutive3_yn', 'yes')" id="btn-bet-modal-no_streak3y" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                <span class="bet-label group-[.selected]:text-white/70">SI (NON ACCADE)</span>
+                                <span class="bet-odd group-[.selected]:text-white" id="odds-no_streak3_y-modal">---</span>
+                            </button>
+                            <button onclick="selectModalBet('consecutive3_yn', 'no')" id="btn-bet-modal-no_streak3n" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                <span class="bet-label group-[.selected]:text-white/70">NO (ACCADE)</span>
+                                <span class="bet-odd group-[.selected]:text-white" id="odds-no_streak3_n-modal">---</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Market: First to Score Wins -->
+                    <div class="market-section">
+                        <div class="flex items-center gap-3 mb-4 px-1">
+                            <div class="h-5 w-1 rounded-full bg-orange-500"></div>
+                            <h3 class="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.1em]">Chi segna per primo vince il match?</h3>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="selectModalBet('fgoal_win_yn', 'yes')" id="btn-bet-modal-fgoal_winy" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                <span class="bet-label group-[.selected]:text-white/70">SI</span>
+                                <span class="bet-odd group-[.selected]:text-white" id="odds-fgoal_win_y-modal">---</span>
+                            </button>
+                            <button onclick="selectModalBet('fgoal_win_yn', 'no')" id="btn-bet-modal-fgoal_winn" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                <span class="bet-label group-[.selected]:text-white/70">NO</span>
+                                <span class="bet-odd group-[.selected]:text-white" id="odds-fgoal_win_n-modal">---</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Market: Killer Point -->
+                    <div class="market-section">
+                        <div class="flex items-center gap-3 mb-4 px-1">
+                            <div class="h-5 w-1 rounded-full bg-red-600"></div>
+                            <h3 class="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.1em]">Partita decisa al Killer Point?</h3>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="selectModalBet('killer_pt_yn', 'yes')" id="btn-bet-modal-killer_pty" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                <span class="bet-label group-[.selected]:text-white/70">SI</span>
+                                <span class="bet-odd group-[.selected]:text-white" id="odds-killer_pt_y-modal">---</span>
+                            </button>
+                            <button onclick="selectModalBet('killer_pt_yn', 'no')" id="btn-bet-modal-killer_ptn" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                <span class="bet-label group-[.selected]:text-white/70">NO</span>
+                                <span class="bet-odd group-[.selected]:text-white" id="odds-killer_pt_n-modal">---</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Market: Ribaltone -->
+                    <div class="market-section">
+                        <div class="flex items-center gap-3 mb-4 px-1">
+                            <div class="h-5 w-1 rounded-full bg-purple-600"></div>
+                            <h3 class="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.1em]">Ribaltone (Rimonta di 4+ gol)?</h3>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="selectModalBet('ribaltone_yn', 'yes')" id="btn-bet-modal-ribaltoney" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                <span class="bet-label group-[.selected]:text-white/70">SI</span>
+                                <span class="bet-odd group-[.selected]:text-white" id="odds-ribaltone_y-modal">---</span>
+                            </button>
+                            <button onclick="selectModalBet('ribaltone_yn', 'no')" id="btn-bet-modal-ribaltonen" class="bet-card bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700/50 shadow-sm group">
+                                <span class="bet-label group-[.selected]:text-white/70">NO</span>
+                                <span class="bet-odd group-[.selected]:text-white" id="odds-ribaltone_n-modal">---</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- FLOATING BET TRIGGER (Primary Color) -->
+            <div id="bet-slip-trigger" class="fixed bottom-6 left-4 right-4 z-40 transform translate-y-32 transition-transform duration-500 pointer-events-none">
+                <button onclick="openBetSlip()" class="pointer-events-auto w-full max-w-lg mx-auto bg-blue-600 hover:bg-blue-500 text-white rounded-[1.8rem] h-16 px-6 flex items-center justify-between shadow-[0_15px_40px_rgba(37,99,235,0.4)] transition-all active:scale-95 group border border-white/10">
+                    <div class="flex items-center gap-4">
+                        <div class="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center font-black text-sm group-hover:bg-white/30 transition-colors shadow-inner backdrop-blur-sm">1</div>
+                        <div class="flex flex-col items-start translate-y-[2px]">
+                            <span class="text-[9px] font-black uppercase tracking-[0.2em] opacity-80 leading-none mb-1">Schedina Attiva</span>
+                            <span id="slip-summary-label" class="text-xs font-black truncate max-w-[150px] tracking-tight">Squadra Blu</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="text-right">
+                            <span class="text-[9px] font-black uppercase tracking-widest opacity-80 block mb-0.5">Quota</span>
+                            <span id="slip-summary-odd" class="text-xl font-black underline decoration-2 decoration-blue-300 underline-offset-4 leading-none">2.50</span>
+                        </div>
+                        <span class="material-symbols-outlined text-white/50 transition-transform group-hover:translate-x-1 group-hover:text-white">chevron_right</span>
+                    </div>
+                </button>
+            </div>
+
+            <!-- BET SLIP DRAWER (Coherent with Modal Base) -->
+            <div id="bet-slip-drawer" class="fixed inset-0 z-50 pointer-events-none overflow-hidden">
+                <div id="slip-overlay" class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm opacity-0 transition-opacity pointer-events-none" onclick="closeBetSlip()"></div>
+                
+                <div id="slip-panel" class="absolute bottom-0 left-0 right-0 max-w-lg mx-auto bg-white dark:bg-gray-800 rounded-t-[2.5rem] shadow-[0_-20px_50px_rgba(0,0,0,0.3)] transform translate-y-full transition-transform duration-500 pointer-events-auto border-t border-gray-100 dark:border-gray-700/50">
+                    <div class="w-12 h-1 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto mt-4 mb-2"></div>
+                    
+                    <div class="p-8">
+                        <div class="flex justify-between items-center mb-8">
+                            <div>
+                                <h3 class="text-2xl font-black text-gray-900 dark:text-white tracking-tight uppercase">Schedina</h3>
+                                <p class="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1">Conferma Giocata</p>
+                            </div>
+                            <button onclick="closeBetSlip()" class="h-10 w-10 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 hover:bg-gray-200 transition-colors">
+                                <span class="material-symbols-outlined text-[20px]">close</span>
+                            </button>
+                        </div>
+
+                        <!-- Selection Summary Badge -->
+                        <div class="bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-700/50 rounded-[2rem] p-6 mb-8 flex justify-between items-center relative overflow-hidden group">
+                            <div class="absolute left-0 top-0 bottom-0 w-2 bg-blue-500"></div>
+                            <div>
+                                <span class="text-[10px] font-black text-blue-500 uppercase tracking-widest block mb-1.5 opacity-80">Mercato: Esito Finale</span>
+                                <h4 id="slip-detail-label" class="text-xl font-black text-gray-900 dark:text-white tracking-tight">SQUADRA BLU</h4>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Quota Live</span>
+                                <div id="slip-detail-odd" class="text-2xl font-black text-gray-900 dark:text-white tabular-nums px-4 py-2 bg-gray-200/50 dark:bg-gray-700/50 rounded-xl">2.50</div>
+                            </div>
+                        </div>
+
+                        <!-- Amount Input Group -->
+                        <div class="space-y-4 mb-8">
+                            <div class="flex justify-between items-center px-2">
+                                <label class="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">Puntata Strisciate</label>
+                                <div class="flex items-center gap-1.5 text-xs font-bold text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">
+                                    <span class="material-symbols-outlined text-[14px] text-yellow-500">monetization_on</span>
+                                    <span id="user-credits-modal-slip">---</span>
+                                </div>
+                            </div>
+                            
+                            <div class="relative">
+                                <input type="number" id="bet-amount-modal" class="w-full bg-gray-50 dark:bg-gray-900 border-2 border-gray-100 dark:border-gray-700 rounded-2xl py-6 px-6 text-3xl font-black text-gray-900 dark:text-white focus:outline-none focus:border-blue-500 transition-all shadow-inner" value="10" placeholder="0">
+                                <div class="absolute right-4 top-1/2 -translate-y-1/2 flex gap-2">
+                                    <button onclick="setSlipAmount(10)" class="h-12 px-4 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs font-black text-gray-700 dark:text-gray-200 rounded-xl border border-gray-200 dark:border-gray-700 transition-all uppercase shadow-sm">+10</button>
+                                    <button onclick="setSlipAmount(50)" class="h-12 px-4 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs font-black text-gray-700 dark:text-gray-200 rounded-xl border border-gray-200 dark:border-gray-700 transition-all uppercase shadow-sm">+50</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Win Overview -->
+                        <div class="bg-blue-600/5 dark:bg-blue-500/10 p-6 rounded-[2rem] border border-blue-100 dark:border-blue-500/20 mb-8 flex justify-between items-center">
+                            <span class="text-sm font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">Possibile Vincita</span>
+                            <div class="text-right">
+                                <div class="text-3xl font-black text-blue-600 dark:text-blue-400 tabular-nums leading-none mb-1" id="slip-potential-win">25.0</div>
+                                <span class="text-[10px] font-bold text-blue-500 uppercase tracking-[0.2em] opacity-80">Strisciate</span>
+                            </div>
+                        </div>
+
+                        <button onclick="submitModalBet()" id="btn-place-bet-pro" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 py-5 rounded-2xl text-white font-black text-lg uppercase tracking-[0.15em] shadow-[0_15px_40px_rgba(37,99,235,0.3)] hover:shadow-[0_20px_50px_rgba(37,99,235,0.4)] hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3">
+                            <span id="pro-btn-text">Piazza Scommessa</span>
+                            <span class="material-symbols-outlined text-[20px] fill-current">check_circle</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<style>
+    .category-tab {
+        background: transparent;
+        color: #6b7280;
+        border-bottom: 2px solid transparent;
+        padding: 0.5rem 1.25rem;
+        font-size: 0.85rem;
+        font-weight: 700;
+        transition: all 0.3s;
+        white-space: nowrap;
+    }
+    .category-tab.active {
+        color: #2563eb;
+        border-color: #2563eb;
+    }
+    .dark .category-tab.active {
+        color: #60a5fa;
+        border-color: #60a5fa;
+    }
+    .bet-card {
+        border-radius: 1.25rem;
+        padding: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        min-height: 90px;
+        border-width: 2px;
+    }
+    .bet-card.selected {
+        background: #2563eb;
+        border-color: #3b82f6;
+        transform: translateY(-4px);
+        box-shadow: 0 12px 25px rgba(37,99,235,0.3);
+    }
+    .dark .bet-card.selected {
+        background: #3b82f6;
+        border-color: #60a5fa;
+        box-shadow: 0 12px 25px rgba(59,130,246,0.3);
+    }
+    .bet-label {
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #6b7280;
+        margin-bottom: 0.5rem;
+    }
+    .dark .bet-label { color: #9ca3af; }
+    .bet-odd {
+        font-size: 1.75rem;
+        font-weight: 900;
+        color: #111827;
+        letter-spacing: -0.02em;
+        line-height: 1;
+    }
+    .dark .bet-odd { color: #f9fafb; }
+    .custom-scrollbar-hidden::-webkit-scrollbar { display: none; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+</style>
+
+<script>
+    let _activeModalBetType = null;
+    let _activeModalBetValue = null;
+    let _activeCat = 'main';
+
+    function switchBetCategory(cat) {
+        document.querySelectorAll('.category-tab').forEach(b => b.classList.remove('active'));
+        document.getElementById('tab-bet-' + cat).classList.add('active');
+        
+        ['main', 'handicap', 'goals', 'scores', 'combo', 'specials'].forEach(c => {
+            const content = document.getElementById(`cat-bet-${c}`);
+            const tab = document.getElementById(`tab-bet-${c}`);
+            if(content) content.classList.add('hidden');
+            if(tab) tab.classList.remove('active');
+        });
+        
+        const target = document.getElementById(`cat-bet-${cat}`);
+        const tabTarget = document.getElementById(`tab-bet-${cat}`);
+        if(target) target.classList.remove('hidden');
+        if(tabTarget) tabTarget.classList.add('active');
+        _activeCat = cat;
+    }
+
+    function openLiveBettingModal() {
+        const modal = document.getElementById('liveBettingModal');
+        const overlay = document.getElementById('liveBettingOverlay');
+        const panel = document.getElementById('liveBettingPanel');
+        
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            overlay.classList.remove('opacity-0');
+            panel.classList.remove('translate-y-full', 'opacity-0');
+        }, 10);
+        
+        if (typeof window.fetchOdds === 'function') window.fetchOdds();
+    }
+
+    function closeLiveBettingModal() {
+        const modal = document.getElementById('liveBettingModal');
+        const overlay = document.getElementById('liveBettingOverlay');
+        const panel = document.getElementById('liveBettingPanel');
+        
+        overlay.classList.add('opacity-0');
+        panel.classList.add('translate-y-full', 'opacity-0');
+        
+        closeBetSlip();
+        
+        setTimeout(() => {
+            modal.classList.add('hidden');
+        }, 500);
+    }
+
+    function selectModalBet(type, value) {
+        if (_activeModalBetType === type && _activeModalBetValue === value) {
+            _activeModalBetType = null;
+            _activeModalBetValue = null;
+        } else {
+            _activeModalBetType = type;
+            _activeModalBetValue = value;
+        }
+        
+        updateBetCardsVisuals();
+        updateBetSlipTrigger();
+    }
+
+    function updateBetCardsVisuals() {
+        document.querySelectorAll('.bet-card').forEach(card => card.classList.remove('selected'));
+        document.querySelectorAll('.bet-card-mini').forEach(card => card.classList.remove('selected'));
+        if (!_activeModalBetType) return;
+        
+        let targetId = '';
+        if (_activeModalBetType === 'winner') targetId = `btn-bet-modal-w${_activeModalBetValue}`;
+        else if (_activeModalBetType === 'deuce') targetId = `btn-bet-modal-d${_activeModalBetValue === 'yes' ? 'y' : 'n'}`;
+        else if (_activeModalBetType === 'handicap') targetId = `btn-handicap-${_activeModalBetValue.replace('-', 'm').replace('+', 'p')}`;
+        else if (_activeModalBetType.endsWith('_yn')) {
+            const shortVal = _activeModalBetValue === 'yes' ? 'y' : 'n';
+            const baseType = _activeModalBetType.replace('_yn', '');
+            targetId = `btn-bet-modal-${baseType}${shortVal}`;
+        }
+        else if (_activeModalBetType === 'deuce_parity') {
+            const m = _activeModalBetValue.replace('.', '').replace('_', '');
+            targetId = `btn-bet-modal-dp${m}`;
+        }
+        else if (_activeModalBetType === 'deuce_winner') targetId = `btn-bet-modal-dw${_activeModalBetValue}`;
+        else if (_activeModalBetType === 'winning_margin') targetId = `btn-bet-modal-mE${_activeModalBetValue}`;
+        else if (_activeModalBetType === 'team_over_under') {
+            const parts = _activeModalBetValue.split('_'); // s1, 3.5, over
+            const m = parts[1].replace('.', '');
+            targetId = `btn-${parts[0]}ou-${m}-${parts[2][0]}`;
+        }
+        else if (_activeModalBetType === 'over_under') {
+            const parts = _activeModalBetValue.split('_'); // 8.5, over
+            const m = parts[0].replace('.', '');
+            targetId = `btn-ou-${m}-${parts[1][0]}`;
+        }
+        else if (_activeModalBetType === 'btts_threshold') {
+            const parts = _activeModalBetValue.split('_'); // 5, yes
+            targetId = `btn-btts-${parts[0]}-${parts[1][0]}`;
+        }
+        else if (_activeModalBetType === 'winning_diff') {
+            const parts = _activeModalBetValue.split('_'); // 2p, yes
+            targetId = `btn-diff-${parts[0]}-${parts[1]}`;
+        }
+        else if (_activeModalBetType === 'exact_score') {
+            targetId = `btn-es-${_activeModalBetValue.replace('-', 'm')}`;
+        }
+        else if (_activeModalBetType === 'combo') {
+            const id = _activeModalBetValue.replace('_', '-');
+            targetId = `btn-cmb-${id}`;
+        }
+        
+        const card = document.getElementById(targetId);
+        if (card) card.classList.add('selected');
+    }
+
+    function updateBetSlipTrigger() {
+        const trigger = document.getElementById('bet-slip-trigger');
+        if (_activeModalBetType) {
+            let finalSourceId = '';
+            if (_activeModalBetType === 'winner') finalSourceId = 'odds-team' + _activeModalBetValue;
+            else if (_activeModalBetType === 'deuce') finalSourceId = 'odds-deuce-' + _activeModalBetValue;
+            else if (_activeModalBetType.endsWith('_yn')) {
+                 const base = _activeModalBetType.replace('_yn', '');
+                 const val = _activeModalBetValue === 'yes' ? 'y' : 'n';
+                 finalSourceId = `odds-${base}_${val}`;
+            } else if (_activeModalBetType === 'team_over_under') {
+                 const parts = _activeModalBetValue.split('_'); // s1, 3.5, over
+                 const teamIdx = parts[0] === 's1' ? '1' : '2';
+                 const m = parts[1].replace('.', '');
+                 finalSourceId = `odds-t${teamIdx}ou${m}${parts[2][0]}`;
+            } else if (_activeModalBetType === 'over_under') {
+                 const parts = _activeModalBetValue.split('_'); // 8.5, over
+                 const m = parts[0].replace('.', '');
+                 finalSourceId = `odds-ou${m}${parts[1][0]}`;
+            } else if (_activeModalBetType === 'btts_threshold') {
+                 const parts = _activeModalBetValue.split('_'); // 5, yes
+                 finalSourceId = `odds-btts${parts[0]}_${parts[1][0]}`;
+            } else if (_activeModalBetType === 'winning_margin') {
+                 finalSourceId = `odds-mE${_activeModalBetValue}`;
+            } else if (_activeModalBetType === 'winning_diff') {
+                 finalSourceId = `odds-m${_activeModalBetValue}`;
+            } else if (_activeModalBetType === 'handicap') {
+                 finalSourceId = `odds-h${_activeModalBetValue.replace('-', 'm').replace('+', 'p')}`;
+            } else if (_activeModalBetType === 'exact_score') {
+                 finalSourceId = `odds-es_${_activeModalBetValue}`;
+            } else if (_activeModalBetType === 'combo') {
+                 finalSourceId = `odds-cmb_${_activeModalBetValue}`;
+            } else {
+                 finalSourceId = `odds-${_activeModalBetType.replace('_', '')}-${_activeModalBetValue.replace('_', '-')}`;
+            }
+            
+            const oddEl = document.getElementById(finalSourceId + '-modal');
+            const oddVal = oddEl ? oddEl.innerText : '---';
+            
+            document.getElementById('slip-summary-label').innerText = getBetReadableName(_activeModalBetType, _activeModalBetValue);
+            document.getElementById('slip-summary-odd').innerText = oddVal;
+            trigger.classList.remove('translate-y-32');
+        } else {
+            trigger.classList.add('translate-y-32');
+        }
+    }
+
+    function getBetReadableName(type, val) {
+        if (type === 'winner') return val === '1' ? 'Squadra Blu' : 'Squadra Rossa';
+        if (type === 'deuce') return val === 'yes' ? 'Sì Vantaggi' : 'No Vantaggi';
+        if (type === 'handicap') {
+             const team = val.startsWith('s1') ? 'Blu' : 'Rossa';
+             const op = val.includes('-') ? '-' : '+';
+             const num = val.split(op)[1];
+             return `Handicap ${team} ${op}${num}`;
+        }
+        if (type === 'over_under') {
+             const parts = val.split('_');
+             return `${parts[1].toUpperCase()} ${parts[0]} Goal`;
+        }
+        if (type === 'deuce_winner') {
+             return (val === '1' ? 'Squadra Blu' : 'Squadra Rossa') + ' (Vince ai Vantaggi)';
+        }
+        if (type === 'deuce_parity') {
+             const parts = val.split('_');
+             return `${parts[1].toUpperCase()} ${parts[0]} Scambi Vantaggi`;
+        }
+        if (type === 'winning_margin') {
+             return `Margine Vittoria Esatto: ${val} Gol`;
+        }
+        if (type === 'winning_diff') {
+             const parts = val.split('_');
+             const label = parts[0].includes('p') ? parts[0].replace('p', '+') : parts[0];
+             return `Vittoria con ${label} Gol Scarto: ${parts[1].toUpperCase()}`;
+        }
+        if (type === 'team_over_under') {
+             const parts = val.split('_');
+             const team = parts[0] === 's1' ? 'Blu' : 'Rossa';
+             return `GOL SQUADRA ${team.toUpperCase()}: ${parts[2].toUpperCase()} ${parts[1]}`;
+        }
+        if (type === 'btts_threshold') {
+             const parts = val.split('_');
+             return `ENTRAMBE SQUADRE SEGNANO ${parts[0]}+ GOL: ${parts[1].toUpperCase()}`;
+        }
+        if (type === 'cappotto_yn') return `CAPPOTTO (8-0/0-8): ${val.toUpperCase()}`;
+        if (type === 'consecutive3_yn') return `NESSUNA SQUADRA 3+ GOL CONSEC: ${val.toUpperCase()}`;
+        if (type === 'fgoal_win_yn') return `CHI SEGNA PER PRIMO VINCE: ${val.toUpperCase()}`;
+        if (type === 'killer_pt_yn') return `PARTITA AL KILLER POINT: ${val.toUpperCase()}`;
+        if (type === 'ribaltone_yn') return `RIBALTONE (RIMONTA 4+): ${val.toUpperCase()}`;
+        if (type === 'exact_score') return `Risultato Esatto: ${val}`;
+        if (type === 'combo') {
+            const parts = val.split('_');
+            const team = parts[0] === 's1' ? 'BLU' : 'ROSSA';
+            const cond = parts[1];
+            let label = '';
+            if (cond[0] === 'o' || cond[0] === 'u') {
+                label = (cond[0] === 'o' ? 'OVER' : 'UNDER') + ' ' + (parseFloat(cond.substring(1))/10) + ' GOAL';
+            } else if (cond === 'vY') label = 'VANTAGGI SÌ';
+            else if (cond === 'vN') label = 'VANTAGGI NO';
+            else if (cond === 'm1') label = 'MARGINE 1 GOL';
+            else if (cond === 'm2') label = 'MARGINE 2 GOL';
+            else if (cond === 'm3') label = 'MARGINE 3+ GOL';
+            return `${team} VINCE + ${label}`;
+        }
+        return 'Scommessa';
+    }
+
+    function openBetSlip() {
+        const oddVal = document.getElementById('slip-summary-odd').innerText;
+        document.getElementById('slip-detail-label').innerText = document.getElementById('slip-summary-label').innerText.toUpperCase();
+        document.getElementById('slip-detail-odd').innerText = oddVal;
+        
+        updatePotentialWin();
+        
+        document.getElementById('slip-overlay').classList.remove('pointer-events-none');
+        document.getElementById('slip-overlay').classList.add('opacity-100');
+        document.getElementById('slip-panel').classList.remove('translate-y-full');
+    }
+
+    function closeBetSlip() {
+        document.getElementById('slip-overlay').classList.add('opacity-0');
+        document.getElementById('slip-overlay').classList.add('pointer-events-none');
+        document.getElementById('slip-panel').classList.add('translate-y-full');
+    }
+
+    function setSlipAmount(val) {
+        const input = document.getElementById('bet-amount-modal');
+        if (val === 10) input.value = 10;
+        else input.value = parseInt(input.value || 0) + val;
+        updatePotentialWin();
+    }
+
+    function updatePotentialWin() {
+        const amount = parseFloat(document.getElementById('bet-amount-modal').value || 0);
+        const odd = parseFloat(document.getElementById('slip-detail-odd').innerText || 1);
+        document.getElementById('slip-potential-win').innerText = (amount * odd).toFixed(1);
+    }
+
+    document.getElementById('bet-amount-modal').addEventListener('input', updatePotentialWin);
+
+    async function submitModalBet() {
+        if (!_activeModalBetType || !_activeModalBetValue) return;
+
+        const amount = parseInt(document.getElementById('bet-amount-modal').value);
+        if (!amount || amount <= 0) {
+            showToast('Inserisci un importo valido', 'error');
+            return;
+        }
+
+        const btn = document.getElementById('btn-place-bet-pro');
+        const btnText = document.getElementById('pro-btn-text');
+        btnText.innerText = "PIAZZAMENTO...";
+        btn.disabled = true;
+
+        try {
+            const res = await fetch(`${BETTING_API}?action=place_bet`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ type: _activeModalBetType, value: _activeModalBetValue, amount, table: 1 })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                showToast(data.message, "success");
+                if (window.confetti) {
+                    confetti({ particleCount: 150, spread: 70, origin: { y: 0.8 }, colors: ['#2563eb', '#ffffff'] });
+                }
+                setTimeout(() => {
+                    closeLiveBettingModal();
+                    _activeModalBetType = null;
+                    _activeModalBetValue = null;
+                    updateBetCardsVisuals();
+                    updateBetSlipTrigger();
+                }, 1000);
+            } else {
+                showToast(data.error, "error");
+            }
+        } catch (e) {
+            showToast("Errore di connessione", "error");
+        } finally {
+            btnText.innerText = "Piazza Scommessa";
+            btn.disabled = false;
+        }
+    }
+</script>
 
 </body>
 </html>
