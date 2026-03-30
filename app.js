@@ -1,4 +1,6 @@
-const API_URL = 'index.php?api=1';
+const urlParams = new URLSearchParams(window.location.search);
+const tableId = urlParams.get('table') || '1';
+const API_URL = `index.php?api=1&table=${tableId}`;
 let currentUser = null;
 let giocatori = [];
 let partite = [];
@@ -2943,7 +2945,19 @@ function updateLiveUI(data) {
     window.isUserSeated = false;
     const scoreS1 = data.score_s1 || 0;
     const scoreS2 = data.score_s2 || 0;
+    
+    // Check if score changed to trigger odds refresh
+    if (window.lastKnownScoreS1 !== undefined && (window.lastKnownScoreS1 !== scoreS1 || window.lastKnownScoreS2 !== scoreS2)) {
+        if (typeof window.fetchOdds === 'function') {
+            window.fetchOdds();
+        }
+    }
+    window.lastKnownScoreS1 = scoreS1;
+    window.lastKnownScoreS2 = scoreS2;
+
+    const tableId = data.table_id;
     const hasSensorsActive = (scoreS1 > 0 || scoreS2 > 0);
+    const tableName = tableId == 1 ? "Calcetto Tuni" : (tableId == 2 ? "Calcetto Margot" : "In attesa di giocatori");
 
     ['mobile', 'desktop'].forEach(view => {
         const s1Container = document.getElementById(`live-score-container-s1-${view}`);
@@ -2955,7 +2969,68 @@ function updateLiveUI(data) {
         const s2El = document.getElementById(`live-score-s2-${view}`);
         if (s1El) s1El.textContent = scoreS1;
         if (s2El) s2El.textContent = scoreS2;
+
+        const tableIndicator = document.getElementById(`active-table-${view}`);
+        if (tableIndicator) {
+            tableIndicator.querySelector('span:last-child').textContent = tableName;
+            tableIndicator.classList.remove('opacity-0');
+            if (!tableId) {
+                tableIndicator.classList.add('text-gray-400');
+                tableIndicator.classList.remove('text-indigo-500');
+            } else {
+                tableIndicator.classList.remove('text-gray-400');
+                tableIndicator.classList.add('text-indigo-500');
+            }
+        }
+
+        // Toggle Betting UI layout based on Table 1 vs Table 2
+        const redirectUI = document.getElementById(`table1-betting-redirect-${view}`);
+        const standardUI = document.getElementById(`standard-betting-ui-${view}`);
+        if (redirectUI && standardUI) {
+            if (tableId == 1) {
+                redirectUI.classList.remove('hidden');
+                standardUI.classList.add('hidden');
+            } else {
+                redirectUI.classList.add('hidden');
+                standardUI.classList.remove('hidden');
+            }
+        }
     });
+
+    // Update Modal Live Scores if Modal is open
+    const modalScore1 = document.getElementById('lb-score-s1');
+    const modalScore2 = document.getElementById('lb-score-s2');
+    if(modalScore1) modalScore1.textContent = scoreS1;
+    if(modalScore2) modalScore2.textContent = scoreS2;
+
+    const playersS1 = document.getElementById('lb-players-s1');
+    const playersS2 = document.getElementById('lb-players-s2');
+    if (playersS1 && playersS2) {
+        const s1p = players['s1_portiere'];
+        const s1a = players['s1_attaccante'];
+        const s2p = players['s2_portiere'];
+        const s2a = players['s2_attaccante'];
+
+        const renderPlayerRow = (p, align = 'start') => {
+            if (!p) return `<div class="text-[10px] text-white/30 italic py-0.5">Soglio Libero</div>`;
+            const name = p.id == 9999 ? "Ospite" : p.nome;
+            const avatarHtml = renderAvatar(name, p.avatar_url, 'bg-white/10', 'text-white');
+            const alignClass = align === 'end' ? 'flex-row-reverse text-right' : 'flex-row text-left';
+            return `
+                <div class="flex items-center gap-2 ${alignClass}">
+                    <div class="h-6 w-6 rounded-full overflow-hidden border border-white/10 flex-shrink-0 shadow-sm relative">
+                        ${avatarHtml}
+                    </div>
+                    <div class="min-w-0">
+                        <div class="text-[10px] font-black text-white leading-tight truncate" data-color="${p.active_name_color || ''}">${name}</div>
+                    </div>
+                </div>
+            `;
+        };
+
+        playersS1.innerHTML = renderPlayerRow(s1p) + renderPlayerRow(s1a);
+        playersS2.innerHTML = renderPlayerRow(s2p, 'end') + renderPlayerRow(s2a, 'end');
+    }
 
     positions.forEach(pos => {
         const player = players[keyMap[pos]]; // {id, nome} or null
@@ -2981,18 +3056,18 @@ function updateLiveUI(data) {
                 let displayName = player.id == 9999 ? "Ospite" : player.nome;
                 nameEl.textContent = displayName;
                 nameEl.setAttribute('data-color', player.active_name_color || '');
-                nameEl.classList.remove('text-gray-400');
-                nameEl.classList.add('text-gray-900', 'dark:text-white');
+                nameEl.classList.remove('text-gray-500', 'dark:text-gray-400');
+                nameEl.classList.add('text-gray-800', 'dark:text-gray-200');
 
                 // --- Specific Bonus Icons ---
                 const pBonuses = activeBonuses[player.id] || [];
                 if (pBonuses.length > 0) {
                     const iconContainer = document.createElement('div');
-                    iconContainer.className = 'bonus-icons-live inline-flex gap-1 ml-1 align-middle';
+                    iconContainer.className = 'bonus-icons-live inline-flex gap-1 ml-1.5 align-text-bottom opacity-80';
 
                     pBonuses.forEach(bKey => {
                         const span = document.createElement('span');
-                        span.className = 'material-symbols-outlined text-[14px] animate-pulse';
+                        span.className = 'material-symbols-outlined text-[13px] animate-pulse';
                         if (bKey === 'x2_elo') {
                             span.textContent = 'rocket_launch';
                             span.classList.add('text-orange-500');
@@ -3010,23 +3085,23 @@ function updateLiveUI(data) {
                     nameEl.appendChild(iconContainer);
                 }
 
-                el.classList.add('border-solid', 'bg-opacity-100');
-                el.classList.remove('border-dashed');
+                el.classList.add('border-solid');
+                el.classList.remove('border-dashed', 'bg-white/70', 'dark:bg-gray-800/70');
 
                 // Style based on team
                 if (pos.startsWith('s1')) { // Blue
                     if (currentUser && player.id == currentUser.id) {
-                        el.classList.add('ring-2', 'ring-blue-500', 'bg-blue-100', 'dark:bg-blue-900/60');
+                        el.classList.add('ring-2', 'ring-blue-500', 'bg-blue-100', 'dark:bg-blue-900/40');
                     } else {
-                        el.classList.add('bg-blue-50', 'dark:bg-blue-900/40');
-                        el.classList.remove('ring-2', 'ring-blue-500', 'bg-blue-100', 'dark:bg-blue-900/60');
+                        el.classList.add('bg-blue-50', 'dark:bg-blue-900/20');
+                        el.classList.remove('ring-2', 'ring-blue-500', 'bg-blue-100', 'dark:bg-blue-900/40');
                     }
                 } else { // Red
                     if (currentUser && player.id == currentUser.id) {
-                        el.classList.add('ring-2', 'ring-red-500', 'bg-red-100', 'dark:bg-red-900/60');
+                        el.classList.add('ring-2', 'ring-red-500', 'bg-red-100', 'dark:bg-red-900/40');
                     } else {
-                        el.classList.add('bg-red-50', 'dark:bg-red-900/40');
-                        el.classList.remove('ring-2', 'ring-red-500', 'bg-red-100', 'dark:bg-red-900/60');
+                        el.classList.add('bg-red-50', 'dark:bg-red-900/20');
+                        el.classList.remove('ring-2', 'ring-red-500', 'bg-red-100', 'dark:bg-red-900/40');
                     }
                 }
 
@@ -3034,28 +3109,25 @@ function updateLiveUI(data) {
                 if (currentUser && player.id == currentUser.id) {
                     el.onclick = () => sitDown(pos);
                 } else {
-                    el.onclick = null; // Prevent clicking others' seats
+                    el.onclick = null;
                 }
 
             } else {
-                nameEl.textContent = "Libero";
-                nameEl.classList.add('text-gray-400');
-                nameEl.classList.remove('text-gray-900', 'dark:text-white');
+                nameEl.textContent = "LIBERO";
+                nameEl.classList.add('text-gray-500', 'dark:text-gray-400');
+                nameEl.classList.remove('text-gray-800', 'dark:text-gray-200');
 
-                el.classList.remove('border-solid', 'bg-opacity-100', 'ring-2', 'ring-blue-500', 'ring-red-500', 'bg-blue-100', 'bg-red-100', 'dark:bg-blue-900/60', 'dark:bg-red-900/60', 'bg-blue-50', 'bg-red-50', 'dark:bg-blue-900/40', 'dark:bg-red-900/40');
-                el.classList.add('border-dashed');
+                el.classList.remove('border-solid', 'ring-2', 'ring-blue-500', 'ring-red-500', 'bg-blue-100', 'bg-red-100', 'dark:bg-blue-900/60', 'dark:bg-red-900/60', 'bg-blue-50', 'bg-red-50', 'dark:bg-blue-900/20', 'dark:bg-red-900/20');
+                el.classList.add('border-dashed', 'bg-white/70', 'dark:bg-gray-800/70');
 
-                // SIT ACTION: Click container to sit SELF
-                // SIT ACTION: Click container to sit SELF - REMOVED PER USER REQUEST (NFC ONLY)
-                // el.onclick = () => sitDown(pos);
                 el.onclick = null;
 
                 // ADD GUEST BUTTON
                 const guestBtn = document.createElement('button');
-                guestBtn.className = 'btn-guest-sit mt-1 px-2 py-0.5 text-[10px] bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded text-gray-700 dark:text-gray-300 transition-colors z-10';
-                guestBtn.innerHTML = '<span class="material-symbols-outlined text-[10px] align-middle">person_add</span> Ospite';
+                guestBtn.className = 'btn-guest-sit mt-1.5 px-2.5 py-1 text-[9px] bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-gray-500 dark:text-gray-400 transition-all z-10 font-black uppercase tracking-widest border border-gray-200 dark:border-gray-600';
+                guestBtn.innerHTML = '<span class="material-symbols-outlined text-[10px] align-middle mr-1">person_add</span> Ospite';
                 guestBtn.onclick = (e) => {
-                    e.stopPropagation(); // Don't trigger parent sitDown
+                    e.stopPropagation(); 
                     sitGhost(pos);
                 };
                 el.appendChild(guestBtn);
