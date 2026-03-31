@@ -25,15 +25,63 @@ function applyNameStyle(name, style) {
         return name.split('').map(char => map[char] || char).reverse().join('');
     }
     if (style === 'chinese' || style === 'name_chinese') {
-        const map = {
-            'a': '卂', 'b': '乃', 'c': '匚', 'd': '刀', 'e': '乇', 'f': '下', 'g': '厶', 'h': '卄', 'i': '工', 'j': '丁',
-            'k': '长', 'l': '乚', 'm': '爪', 'n': '冂', 'o': '口', 'p': '尸', 'q': '口', 'r': '尺', 's': '丂', 't': '丅',
-            'u': '凵', 'v': 'V', 'w': '山', 'x': '乂', 'y': '丫', 'z': '乙',
-            'A': '卂', 'B': '乃', 'C': '匚', 'D': '刀', 'E': '乇', 'F': '下', 'G': '厶', 'H': '卄', 'I': '工', 'J': '丁',
-            'K': '长', 'L': '乚', 'M': '爪', 'N': '冂', 'O': '口', 'P': '尸', 'Q': '口', 'R': '尺', 'S': '丂', 'T': '丅',
-            'U': '凵', 'V': 'V', 'W': '山', 'X': '乂', 'Y': '丫', 'Z': '乙'
+        const dictionary = {
+            'matteo': '马泰奥', 'marco': '马可', 'luca': '卢卡', 'davide': '大卫', 'andrea': '安德烈',
+            'alessandro': '亚历山德罗', 'francesco': '弗朗奇斯科', 'giuseppe': '朱塞佩', 'antonio': '安东尼奥',
+            'giovanni': '乔瓦尼', 'maria': '玛丽亚', 'elena': '埃琳娜', 'giulia': '朱莉娅', 'sara': '莎拉',
+            'martina': '玛蒂娜', 'chiara': '基亚拉', 'paolo': '保罗', 'roberto': '罗伯托', 'stefano': '斯蒂法诺'
         };
-        return name.split('').map(char => map[char] || char).join('');
+        const lowerName = name.toLowerCase();
+        if (dictionary[lowerName]) return dictionary[lowerName];
+
+        // Syllabic fallback
+        const syllables = {
+            'ma': '马', 'me': '梅', 'mi': '米', 'mo': '莫', 'mu': '穆',
+            'ta': '塔', 'te': '泰', 'ti': '蒂', 'to': '托', 'tu': '图',
+            'la': '拉', 'le': '莱', 'li': '里', 'lo': '洛', 'lu': '卢',
+            'da': '达', 'de': '德', 'di': '迪', 'do': '多', 'du': '杜',
+            'ba': '巴', 'be': '贝', 'bi': '比', 'bo': '波', 'bu': '布',
+            'pa': '帕', 'pe': '佩', 'pi': '皮', 'po': '波', 'pu': '普',
+            'sa': '萨', 'se': '塞', 'si': '斯', 'so': '索', 'su': '苏',
+            'ra': '拉', 're': '雷', 'ri': '里', 'ro': '罗', 'ru': '鲁',
+            'na': '娜', 'ne': '内', 'ni': '尼', 'no': '诺', 'nu': '努',
+            'ca': '卡', 'ce': '切', 'ci': '奇', 'co': '科', 'cu': '库',
+            'ga': '加', 'ge': '杰', 'gi': '吉', 'go': '戈', 'gu': '古',
+            'fa': '法', 'fe': '费', 'fi': '菲', 'fo': '福', 'fu': '富',
+            'va': '瓦', 've': '维', 'vi': '维', 'vo': '沃', 'vu': '武',
+            'za': '扎', 'ze': '泽', 'zi': '齐', 'zo': '佐', 'zu': '祖',
+            'an': '安', 'en': '恩', 'in': '因', 'on': '昂', 'un': '温',
+            'ar': '尔', 'er': '尔', 'ir': '尔', 'or': '奥', 'ur': '尔'
+        };
+        
+        let result = '';
+        let i = 0;
+        const n = lowerName.length;
+        while (i < n) {
+            let found = false;
+            // Try 2 chars
+            if (i < n - 1) {
+                const chunk = lowerName.substring(i, i + 2);
+                if (syllables[chunk]) {
+                    result += syllables[chunk];
+                    i += 2;
+                    found = true;
+                }
+            }
+            // Try 1 char (approximate)
+            if (!found) {
+                const char = lowerName[i];
+                const charMap = {
+                    'a': '阿', 'e': '埃', 'i': '伊', 'o': '奥', 'u': '乌', 
+                    's': '斯', 'r': '尔', 'l': '尔', 'n': '恩', 'm': '姆',
+                    'f': '夫', 't': '特', 'd': '德', 'b': '布', 'p': '普',
+                    'k': '克', 'g': '格', 'h': '赫'
+                };
+                result += charMap[char] || '';
+                i++;
+            }
+        }
+        return result || name;
     }
     if (style === 'russian' || style === 'name_russian') {
         const map = {
