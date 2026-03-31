@@ -115,7 +115,11 @@ try {
         }
 
         // 2. Verify Live Match Status (Must be seated?)
-        $stmt = $conn->query("SELECT * FROM live_match WHERE id = 1 FOR UPDATE");
+        $tableId = (int)($_POST['table'] ?? 1);
+        if ($tableId < 1) $tableId = 1;
+
+        $stmt = $conn->prepare("SELECT * FROM live_match WHERE id = 1 FOR UPDATE");
+        $stmt->execute();
         $match = $stmt->fetch(PDO::FETCH_ASSOC);
 
         $isPlayer = false;
@@ -164,16 +168,18 @@ try {
         
         if ($key === 'x2_elo' || $key === 'palla_matta') {
             // Check if player already has an active bonus for this match
-            $checkStmt = $conn->prepare("SELECT COUNT(*) FROM live_match_bonuses WHERE match_id = 1 AND user_id = ? AND status = 'active'");
-            $checkStmt->execute([$userId]);
+            $checkStmt = $conn->prepare("SELECT COUNT(*) FROM live_match_bonuses WHERE match_id = ? AND user_id = ? AND status = 'active'");
+            $checkStmt->execute([$tableId, $userId]);
+            $checkStmt->execute([$match['table_id'], $userId]);
             $activeCount = $checkStmt->fetchColumn();
             
             if ($activeCount > 0) {
                 throw new Exception("Puoi usare solo un bonus per partita!");
             }
             
-            $sqlLog = "INSERT INTO live_match_bonuses (match_id, user_id, item_key, status) VALUES (1, ?, ?, 'active')";
-            $conn->prepare($sqlLog)->execute([$userId, $key]);
+            $sqlB = "INSERT INTO live_match_bonuses (user_id, match_id, item_key, status) VALUES (?, ?, ?, 'active')";
+            $stmtB = $conn->prepare($sqlB);
+            $stmtB->execute([$userId, $match['table_id'], $key]);
         }
 
         // 4. Consume Item
@@ -216,9 +222,9 @@ try {
             $column = 'active_name_color';
             $value = str_replace('color_', '', $key);
             $_SESSION['user_name_color'] = $value;
-        } elseif (strpos($key, 'style_') === 0) {
+        } elseif (strpos($key, 'style_') === 0 || strpos($key, 'name_') === 0) {
             $column = 'active_name_style';
-            $value = str_replace('style_', '', $key);
+            $value = str_replace(['style_', 'name_'], '', $key);
             $_SESSION['user_name_style'] = $value;
         }
 
@@ -245,6 +251,9 @@ try {
         if ($column) {
             $stmt = $conn->prepare("UPDATE giocatori SET $column = NULL WHERE id = ?");
             $stmt->execute([$userId]);
+            // Global match reset
+            $conn->prepare("UPDATE live_match SET s1_portiere=NULL, s1_attaccante=NULL, s2_portiere=NULL, s2_attaccante=NULL, score_s1=0, score_s2=0, data_inizio_match=NULL WHERE id = 1")
+                 ->execute();
             echo json_encode(['success' => true, 'message' => "Rimosso: $type"]);
         } else {
             throw new Exception("Tipo non valido");
@@ -255,8 +264,14 @@ try {
 
     // --- ACTIVE BONUSES ---
     if ($action === 'active_bonuses') {
-        $stmt = $conn->query("SELECT item_key FROM live_match_bonuses WHERE match_id = 1 AND status = 'active'");
-        $bonuses = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        // Get currently active bonuses for BOTH inventory and match state filtering
+        $sqlLive = "SELECT * FROM live_match WHERE id = 1";
+        $match = $conn->query($sqlLive)->fetch(PDO::FETCH_ASSOC);
+
+        $sqlB = "SELECT item_key FROM live_match_bonuses WHERE user_id = ? AND match_id = ? AND status = 'active'";
+        $stmtB = $conn->prepare($sqlB);
+        $stmtB->execute([$userId, $match['table_id']]);
+        $bonuses = $stmtB->fetchAll(PDO::FETCH_COLUMN);
         
         echo json_encode(['success' => true, 'active_bonuses' => $bonuses]);
         exit;
