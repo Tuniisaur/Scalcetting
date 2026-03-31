@@ -1002,10 +1002,10 @@ body {
 }
 
 [data-style="chinese"], [data-style="name_chinese"], .name-chinese {
-    font-family: 'Shojumaru', cursive !important;
+    font-family: 'Noto Sans SC', sans-serif !important;
+    font-weight: 700 !important;
     color: #e60000 !important;
-    text-shadow: 2px 2px 0px #000 !important;
-    letter-spacing: 1px !important;
+    text-shadow: 1px 1px 0px rgba(0,0,0,0.2) !important;
 }
 
 [data-style="russian"], [data-style="name_russian"], .name-russian {
@@ -1853,3 +1853,5 @@ nav .nav-item.text-blue-500 span {
     .betting-line-sep { padding: 12px 20px 4px; }
     .bet-card, .bet-card-mini, .bet-card-compact { min-height: 62px; }
 }
+
+
