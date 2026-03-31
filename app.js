@@ -3130,9 +3130,21 @@ function updateLiveUI(data) {
                     e.stopPropagation(); 
                     sitGhost(pos);
                 };
-                el.appendChild(guestBtn);
             }
         });
+    });
+
+    // --- Update Live Status Text ---
+    const statusText = filledCount < 4 ? 'In attesa di giocatori' : 'Match in corso';
+    ['mobile', 'desktop'].forEach(view => {
+        const el = document.getElementById(`live-status-text-${view}`);
+        if (el) {
+            if (view === 'desktop') {
+                el.textContent = filledCount < 4 ? 'In attesa' : 'Partita Live';
+            } else {
+                el.textContent = statusText;
+            }
+        }
     });
 
     // Check for Bounty
