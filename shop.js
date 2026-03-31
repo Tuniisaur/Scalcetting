@@ -31,7 +31,7 @@ async function openShopModal() {
 
     // Fetch Items
     try {
-        const res = await fetch('shop_api.php?action=list');
+        const res = await fetch(`shop_api.php?action=list&table=${tableId}`);
         const data = await res.json();
 
         if (data.success) {
@@ -70,7 +70,8 @@ function generateItemCardHTML(item, options = {}) {
                             item.key_name.startsWith('aura_') || 
                             item.key_name.startsWith('title_') || 
                             item.key_name.startsWith('color_') ||
-                            item.key_name.startsWith('style_')
+                            item.key_name.startsWith('style_') ||
+                            item.key_name.startsWith('name_')
                         ));
     
     // Standardized visual tokens
@@ -143,7 +144,8 @@ function openShopDetailModal(itemId) {
                                 item.key_name.startsWith('aura_') || 
                                 item.key_name.startsWith('title_') || 
                                 item.key_name.startsWith('color_') || 
-                                item.key_name.startsWith('style_')
+                                item.key_name.startsWith('style_') ||
+                                item.key_name.startsWith('name_')
                             ));
         const container = document.getElementById('sd-icon-container');
         container.className = `h-14 w-14 rounded-2xl flex items-center justify-center text-3xl shadow-sm ${isAesthetic ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400' : 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-600 dark:text-yellow-400'}`;
@@ -290,8 +292,8 @@ function renderShopDetailPreview(item, container) {
                 </h3>
             </div>
         `;
-    } else if (key && key.startsWith('style_')) {
-        const styleType = key.replace('style_', '');
+    } else if (key && (key.startsWith('style_') || key.startsWith('name_'))) {
+        const styleType = key.replace('style_', '').replace('name_', '');
         let displayName = sampleName;
         if (styleType === 'arabic') {
             displayName = transliterateToArabic(sampleName);
@@ -324,7 +326,8 @@ function renderShopItems() {
                                item.key_name.startsWith('aura_') || 
                                item.key_name.startsWith('title_') || 
                                item.key_name.startsWith('color_') ||
-                               item.key_name.startsWith('style_')
+                               item.key_name.startsWith('style_') ||
+                               item.key_name.startsWith('name_')
                            ));
         
         const targetType = isActuallyAesthetic ? 'aesthetic' : 'bonus';
@@ -342,7 +345,8 @@ function renderShopItems() {
                                 item.key_name.startsWith('aura_') || 
                                 item.key_name.startsWith('title_') || 
                                 item.key_name.startsWith('color_') ||
-                                item.key_name.startsWith('style_')
+                                item.key_name.startsWith('style_') ||
+                                item.key_name.startsWith('name_')
                             ));
         
         const isOwned = isAesthetic && parseInt(item.owned_quantity) > 0;
@@ -439,7 +443,7 @@ async function loadUserInventory() {
     }
 
     try {
-        const res = await fetch('shop_api.php?action=inventory');
+        const res = await fetch(`shop_api.php?action=inventory&table=${tableId}`);
         const data = await res.json();
 
         if (data.success) {
@@ -450,7 +454,8 @@ async function loadUserInventory() {
                                        item.key_name.startsWith('aura_') || 
                                        item.key_name.startsWith('title_') || 
                                        item.key_name.startsWith('color_') ||
-                                       item.key_name.startsWith('style_')
+                                       item.key_name.startsWith('style_') ||
+                                       item.key_name.startsWith('name_')
                                    ));
                 return !isAesthetic;
             });
@@ -519,6 +524,7 @@ async function confirmUseItem(itemId) {
     try {
         const fd = new FormData();
         fd.append('item_id', itemId);
+        fd.append('table', tableId);
         const res = await fetch('shop_api.php?action=use', { method: 'POST', body: fd });
         const data = await res.json();
 
@@ -557,7 +563,7 @@ async function checkActiveBonuses() {
 async function loadProfileInventory() {
     if (!currentUser.id) return;
     try {
-        const res = await fetch('shop_api.php?action=inventory');
+        const res = await fetch(`shop_api.php?action=inventory&table=${tableId}`);
         const data = await res.json();
         if (data.success) {
             userInventory = data.inventory;
@@ -583,7 +589,8 @@ function renderProfileInventory() {
                                item.key_name.startsWith('aura_') || 
                                item.key_name.startsWith('title_') || 
                                item.key_name.startsWith('color_') ||
-                               item.key_name.startsWith('style_')
+                               item.key_name.startsWith('style_') ||
+                               item.key_name.startsWith('name_')
                            ));
         
         let actionHTML = '';
@@ -604,9 +611,9 @@ function renderProfileInventory() {
             } else if (item.key_name && item.key_name.startsWith('color_')) {
                 type = 'color';
                 isEquipped = player.active_name_color === item.key_name.replace('color_', '');
-            } else if (item.key_name && item.key_name.startsWith('style_')) {
+            } else if (item.key_name && (item.key_name.startsWith('style_') || item.key_name.startsWith('name_'))) {
                 type = 'style';
-                isEquipped = player.active_name_style === item.key_name.replace('style_', '');
+                isEquipped = player.active_name_style === item.key_name.replace('style_', '').replace('name_', '');
             }
 
             if (isEquipped) {
