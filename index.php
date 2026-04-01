@@ -1056,10 +1056,10 @@ endif; ?>
                         <!-- ACCORDION CONTENT -->
                         <div id="betting-content-mobile" class="overflow-hidden transition-[max-height,opacity] duration-500 ease-in-out max-h-0 opacity-0 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 rounded-b-2xl">
                             <!-- REDIRECT FOR TABLE 1 -->
-                            <div id="table1-betting-redirect-mobile" class="hidden bg-slate-50/50 dark:bg-gray-800/50 p-6 flex flex-col items-center justify-center">
-                                <button onclick="openLiveBettingModal()" class="w-full p-5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-sm hover:shadow-md hover:border-blue-200 dark:hover:border-blue-800 transition-all flex items-center justify-between group relative overflow-hidden">
-                                    <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-500 rounded-r-lg translate-x-0 group-hover:h-12 transition-all"></div>
-                                    <div class="flex flex-col items-start px-2">
+                            <div id="table1-betting-redirect-mobile" class="hidden flex flex-col items-center justify-center p-0">
+                                <button onclick="openLiveBettingModal()" class="w-full p-6 bg-white/50 dark:bg-white/5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-b-2xl transition-all flex items-center justify-between group relative overflow-hidden">
+                                    <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-500 translate-x-0 group-hover:w-2 transition-all"></div>
+                                    <div class="flex flex-col items-start px-4">
                                         <span class="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] mb-1">Live Betting</span>
                                         <span class="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">Apri Centro Scommesse</span>
                                     </div>
@@ -1070,42 +1070,71 @@ endif; ?>
                             </div>
 
                             <!-- STANDARD UI FOR TABLE 2 -->
-                            <div id="standard-betting-ui-mobile" class="p-4">
-                                <div class="flex justify-between items-center mb-4">
-                                    <div class="flex items-center gap-2">
-                                        <button onclick="openOddsExplanationModal()" class="info-btn text-gray-400 hover:text-blue-500 transition-colors flex items-center justify-center p-1 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 gap-1 mt-1">
-                                            <span class="material-symbols-outlined text-[18px]">info</span> <span class="text-xs font-semibold">Info Quota</span>
-                                        </button>
-                                        <div class="hidden items-center gap-1 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded text-[10px] font-medium border border-indigo-100 dark:border-indigo-800/30 mt-1" id="oddsDivisorBadge-mobile">
-                                            <span class="material-symbols-outlined text-[12px]">public</span> Div. 
-                                            <span id="oddsDivisorValue-mobile" class="font-bold">--</span>
+                            <div id="standard-betting-ui-mobile" class="hidden p-0 bg-gray-50 dark:bg-gray-900/50">
+                                <!-- HEADER STATS -->
+                                <div class="flex justify-between items-center p-4 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
+                                    <button onclick="openOddsExplanationModal()" class="info-btn flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all active:scale-95">
+                                        <span class="material-symbols-outlined text-[14px]">info</span> Spiegazione
+                                    </button>
+                                    <div class="text-right">
+                                        <div class="text-[9px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Tuo Saldo</div>
+                                        <div class="flex items-center gap-1 justify-end">
+                                            <span class="material-symbols-outlined text-yellow-500 text-[14px]">monetization_on</span>
+                                            <span id="user-credits-mobile" class="text-sm font-black text-gray-900 dark:text-white">---</span>
                                         </div>
                                     </div>
-                                    <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Strisciate: <span id="user-credits-mobile" class="text-primary font-bold">---</span></span>
                                 </div>
 
+                                <!-- Active Bets Container will be at the bottom -->
 
+                                <!-- MARKETS -->
+                                <div class="p-4 space-y-4">
+                                    <!-- Esito Incontro -->
+                                    <div class="betting-market-group rounded-xl overflow-hidden border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
+                                        <div class="flex items-center gap-2 p-3 bg-gray-50/50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-700">
+                                            <div class="w-1 h-3 bg-blue-500 rounded-full"></div>
+                                            <h3 class="text-[10px] font-black text-gray-900 dark:text-white uppercase tracking-wider">Esito Incontro</h3>
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-0">
+                                            <button onclick="selectStandardBet('winner', '1', 2)" id="btn-standard-w1-mobile" class="bet-card border-r border-gray-50 dark:border-gray-700/50">
+                                                <span class="bet-label">Squadra Blu</span>
+                                                <span class="bet-odd" id="odds-team1-mobile">---</span>
+                                            </button>
+                                            <button onclick="selectStandardBet('winner', '2', 2)" id="btn-standard-w2-mobile" class="bet-card">
+                                                <span class="bet-label">Squadra Rossa</span>
+                                                <span class="bet-odd" id="odds-team2-mobile">---</span>
+                                            </button>
+                                        </div>
+                                    </div>
 
-                                <div class="grid grid-cols-2 gap-3 mb-4">
-                                    <button onclick="selectStandardBet('winner', '1', 2)" class="bet-card bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 border border-blue-200 dark:border-blue-800 rounded-xl p-3 flex flex-col items-center transition-colors">
-                                        <span class="text-xs font-bold text-blue-600 dark:text-blue-400">Vince Blu</span>
-                                        <span class="text-lg font-bold text-gray-900 dark:text-white bet-odd" id="odds-team1-mobile">---</span>
-                                    </button>
-                                    <button onclick="selectStandardBet('winner', '2', 2)" class="bet-card bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 border border-red-200 dark:border-red-800 rounded-xl p-3 flex flex-col items-center transition-colors">
-                                        <span class="text-xs font-bold text-red-600 dark:text-red-400">Vince Rosso</span>
-                                        <span class="text-lg font-bold text-gray-900 dark:text-white bet-odd" id="odds-team2-mobile">---</span>
-                                    </button>
-                                </div>
+                                    <!-- Vantaggi -->
+                                    <div class="betting-market-group rounded-xl overflow-hidden border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
+                                        <div class="flex items-center gap-2 p-3 bg-gray-50/50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-700">
+                                            <div class="w-1 h-3 bg-indigo-500 rounded-full"></div>
+                                            <h3 class="text-[10px] font-black text-gray-900 dark:text-white uppercase tracking-wider">Andrà ai Vantaggi?</h3>
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-0">
+                                            <button onclick="selectStandardBet('deuce', 'yes', 2)" id="btn-standard-dy-mobile" class="bet-card border-r border-gray-50 dark:border-gray-700/50">
+                                                <span class="bet-label">SÌ</span>
+                                                <span class="bet-odd" id="odds-deuce-yes-mobile">---</span>
+                                            </button>
+                                            <button onclick="selectStandardBet('deuce', 'no', 2)" id="btn-standard-dn-mobile" class="bet-card">
+                                                <span class="bet-label">NO</span>
+                                                <span class="bet-odd" id="odds-deuce-no-mobile">---</span>
+                                            </button>
+                                        </div>
+                                    </div>
 
-                                <div class="grid grid-cols-2 gap-3">
-                                    <button onclick="selectStandardBet('deuce', 'yes', 2)" class="bet-card bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600 rounded-xl p-3 flex flex-col items-center transition-colors">
-                                        <span class="text-xs font-bold text-gray-500 dark:text-gray-400">Vantaggi? SI</span>
-                                        <span class="text-lg font-bold text-gray-900 dark:text-white bet-odd" id="odds-deuce-yes-mobile">---</span>
-                                    </button>
-                                    <button onclick="selectStandardBet('deuce', 'no', 2)" class="bet-card bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600 rounded-xl p-3 flex flex-col items-center transition-colors">
-                                        <span class="text-xs font-bold text-gray-500 dark:text-gray-400">Vantaggi? NO</span>
-                                        <span class="text-lg font-bold text-gray-900 dark:text-white bet-odd" id="odds-deuce-no-mobile">---</span>
-                                    </button>
+                                    <!-- Restructured Active Bets (Table 2 Mobile) -->
+                                    <div class="active-bets-banner hidden">
+                                        <div class="betting-mkt-header" style="background:rgba(251,191,36,0.08)">
+                                            <div class="betting-mkt-bar" style="background:#fbbf24"></div>
+                                            <h3 style="color:#92400e">LE MIE SCOMMESSE</h3>
+                                        </div>
+                                        <div class="active-bets-list">
+                                            <!-- Rows injected via JS -->
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1260,10 +1289,10 @@ endif; ?>
                                 <!-- ACCORDION CONTENT -->
                                 <div id="betting-content-desktop" class="overflow-hidden transition-[max-height,opacity] duration-500 ease-in-out max-h-0 opacity-0 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 rounded-b-2xl">
                                     <!-- REDIRECT FOR TABLE 1 -->
-                                    <div id="table1-betting-redirect-desktop" class="hidden bg-slate-50/50 dark:bg-gray-800/50 p-8 flex flex-col items-center justify-center">
-                                        <button onclick="openLiveBettingModal()" class="w-full max-w-md p-6 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-3xl shadow-sm hover:shadow-xl hover:border-blue-300 dark:hover:border-blue-700 transition-all flex items-center justify-between group relative overflow-hidden">
-                                            <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-10 bg-blue-500 rounded-r-lg group-hover:h-16 transition-all"></div>
-                                            <div class="flex flex-col items-start px-4">
+                                    <div id="table1-betting-redirect-desktop" class="hidden flex flex-col items-center justify-center p-0">
+                                        <button onclick="openLiveBettingModal()" class="w-full p-8 bg-white/50 dark:bg-white/5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-b-2xl transition-all flex items-center justify-between group relative overflow-hidden">
+                                            <div class="absolute left-0 top-0 bottom-0 w-2 bg-blue-500 group-hover:w-3 transition-all"></div>
+                                            <div class="flex flex-col items-start px-6">
                                                 <span class="text-xs font-black text-blue-500 uppercase tracking-[0.2em] mb-1">Centro Scommesse Live</span>
                                                 <span class="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight">Piazza la tua puntata</span>
                                             </div>
@@ -1274,49 +1303,79 @@ endif; ?>
                                     </div>
 
                                     <!-- STANDARD UI FOR TABLE 2 -->
-                                    <div id="standard-betting-ui-desktop" class="p-6">
-                                    <div class="flex justify-between items-center mb-6">
-                                        <div class="flex items-center gap-3">
-                                            <button onclick="openOddsExplanationModal()" class="info-btn text-gray-400 hover:text-blue-500 transition-colors flex items-center gap-2 p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30">
-                                                <span class="material-symbols-outlined">info</span> <span class="text-sm font-semibold">Spiegazione Quote</span>
-                                            </button>
-                                            <div class="hidden items-center gap-1.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 px-3 py-1 rounded-full text-xs font-medium border border-indigo-100 dark:border-indigo-800/30" id="oddsDivisorBadge-desktop">
-                                                <span class="material-symbols-outlined text-[14px]">public</span> Divisore:
-                                                <span id="oddsDivisorValue-desktop" class="font-bold">--</span>
+                                    <div id="standard-betting-ui-desktop" class="hidden p-0 bg-gray-50 dark:bg-gray-900/50">
+                                        <!-- HEADER STATS -->
+                                        <div class="flex justify-between items-center p-5 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
+                                            <div class="flex items-center gap-4">
+                                                <button onclick="openOddsExplanationModal()" class="info-btn flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-xl text-xs font-black uppercase tracking-wider transition-all hover:bg-blue-100 dark:hover:bg-blue-900/40">
+                                                    <span class="material-symbols-outlined">info</span> Spiegazione Quote
+                                                </button>
+                                                <div class="hidden items-center gap-1.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 px-3 py-1 rounded-full text-xs font-medium border border-indigo-100 dark:border-indigo-800/30" id="oddsDivisorBadge-desktop">
+                                                    <span class="material-symbols-outlined text-[14px]">public</span> Divisore: <span id="oddsDivisorValue-desktop" class="font-bold">--</span>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-4">
+                                                <div class="text-right">
+                                                    <div class="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Saldo Attuale</div>
+                                                    <div class="flex items-center gap-1.5 justify-end">
+                                                        <span class="material-symbols-outlined text-yellow-500 text-[18px]">monetization_on</span>
+                                                        <span id="user-credits-desktop" class="text-xl font-black text-gray-900 dark:text-white">---</span>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
-                                        <div class="bg-gray-100 dark:bg-gray-700 px-4 py-2 rounded-lg">
-                                            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Strisciate:</span>
-                                            <span class="text-lg font-bold text-primary ml-2" id="user-credits-desktop">---</span>
+
+                                        <!-- Active Bets Container will be at the bottom -->
+
+                                        <!-- MARKETS GRID -->
+                                        <div class="p-6 grid grid-cols-2 gap-6">
+                                            <!-- Esito Incontro -->
+                                            <div class="betting-market-group rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
+                                                <div class="flex items-center gap-2 p-4 bg-gray-50/50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-700">
+                                                    <div class="w-1.5 h-4 bg-blue-500 rounded-full"></div>
+                                                    <h3 class="text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider">Esito Incontro</h3>
+                                                </div>
+                                                <div class="grid grid-cols-2 gap-0">
+                                                    <button onclick="selectStandardBet('winner', '1', 2)" id="btn-standard-w1-desktop" class="bet-card border-r border-gray-50 dark:border-gray-700/50 h-24">
+                                                        <span class="bet-label px-2">Squadra Blu</span>
+                                                        <span class="bet-odd text-3xl" id="odds-team1-desktop">---</span>
+                                                    </button>
+                                                    <button onclick="selectStandardBet('winner', '2', 2)" id="btn-standard-w2-desktop" class="bet-card h-24">
+                                                        <span class="bet-label px-2">Squadra Rossa</span>
+                                                        <span class="bet-odd text-3xl" id="odds-team2-desktop">---</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <!-- Vantaggi -->
+                                            <div class="betting-market-group rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
+                                                <div class="flex items-center gap-2 p-4 bg-gray-50/50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-700">
+                                                    <div class="w-1.5 h-4 bg-indigo-500 rounded-full"></div>
+                                                    <h3 class="text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider">Andrà ai Vantaggi?</h3>
+                                                </div>
+                                                <div class="grid grid-cols-2 gap-0">
+                                                    <button onclick="selectStandardBet('deuce', 'yes', 2)" id="btn-standard-dy-desktop" class="bet-card border-r border-gray-50 dark:border-gray-700/50 h-24">
+                                                        <span class="bet-label">SÌ</span>
+                                                        <span class="bet-odd text-3xl" id="odds-deuce-yes-desktop">---</span>
+                                                    </button>
+                                                    <button onclick="selectStandardBet('deuce', 'no', 2)" id="btn-standard-dn-desktop" class="bet-card h-24">
+                                                        <span class="bet-label">NO</span>
+                                                        <span class="bet-odd text-3xl" id="odds-deuce-no-desktop">---</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <!-- Restructured Active Bets (Table 2 Desktop) -->
+                                            <div class="active-bets-banner hidden" style="grid-column: span 2;">
+                                                <div class="betting-mkt-header" style="background:rgba(251,191,36,0.08)">
+                                                    <div class="betting-mkt-bar" style="background:#fbbf24"></div>
+                                                    <h3 style="color:#92400e">LE MIE SCOMMESSE</h3>
+                                                </div>
+                                                <div class="active-bets-list">
+                                                    <!-- Rows injected via JS -->
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-
-
-
-                                    <div class="grid grid-cols-4 gap-4">
-                                        <button onclick="selectStandardBet('winner', '1', 2)" class="bet-card group relative overflow-hidden bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 border border-blue-200 dark:border-blue-800 rounded-xl p-4 transition-all">
-                                            <div class="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-2">Vince Blu</div>
-                                            <div class="text-3xl font-bold text-gray-900 dark:text-white bet-odd" id="odds-team1-desktop">---</div>
-                                            <div class="absolute bottom-0 right-0 p-2 opacity-10 group-hover:opacity-20">
-                                                <span class="material-symbols-outlined text-4xl">inventory_2</span>
-                                            </div>
-                                        </button>
-                                        <button onclick="selectStandardBet('winner', '2', 2)" class="bet-card group relative overflow-hidden bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800 rounded-xl p-4 transition-all">
-                                            <div class="text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-wider mb-2">Vince Rosso</div>
-                                            <div class="text-3xl font-bold text-gray-900 dark:text-white bet-odd" id="odds-team2-desktop">---</div>
-                                            <div class="absolute bottom-0 right-0 p-2 opacity-10 group-hover:opacity-20">
-                                                <span class="material-symbols-outlined text-4xl">inventory_2</span>
-                                            </div>
-                                        </button>
-                                        <button onclick="selectStandardBet('deuce', 'yes', 2)" class="bet-card group relative overflow-hidden bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-4 transition-all">
-                                            <div class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Vantaggi: SI</div>
-                                            <div class="text-3xl font-bold text-gray-900 dark:text-white bet-odd" id="odds-deuce-yes-desktop">---</div>
-                                        </button>
-                                        <button onclick="selectStandardBet('deuce', 'no', 2)" class="bet-card group relative overflow-hidden bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-4 transition-all">
-                                            <div class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Vantaggi: NO</div>
-                                            <div class="text-3xl font-bold text-gray-900 dark:text-white bet-odd" id="odds-deuce-no-desktop">---</div>
-                                        </button>
-                                    </div>
                                     </div>
                                 </div>
                             </div>
@@ -2234,6 +2293,7 @@ endif; ?>
                      document.getElementById('betting-wrapper-mobile')?.classList.add('hidden');
                      document.getElementById('betting-wrapper-desktop')?.classList.add('hidden');
                 }
+                fetchActiveBets();
             } catch (e) {
                 console.error("Betting poll error", e);
             }
@@ -2432,11 +2492,12 @@ endif; ?>
         function setMarketStatus(id, isSuspended) {
             const el = document.getElementById(id);
             if (!el) return;
+            el.dataset.suspended = isSuspended; // Track state persistently
             if (isSuspended) {
-                el.classList.add('opacity-50', 'grayscale', 'pointer-events-none');
+                el.classList.add('opacity-50', 'grayscale', 'pointer-events-none', 'locked');
                 el.setAttribute('disabled', 'true');
             } else {
-                el.classList.remove('opacity-50', 'grayscale', 'pointer-events-none');
+                el.classList.remove('opacity-50', 'grayscale', 'pointer-events-none', 'locked');
                 el.removeAttribute('disabled');
             }
         }
@@ -2445,19 +2506,35 @@ endif; ?>
             const el = document.getElementById(id);
             if (!el) return;
             
+            const val = parseFloat(newValue);
+            const isInvalid = isNaN(val) || val <= 1.00;
+            
+            // Robust parent discovery: find closest button or card regardless of specific class
+            const parent = el.closest('button, .bet-card, .bet-card-mini, .bet-card-compact');
+            
+            if (parent) {
+                const isExplicitlySuspended = parent.dataset.suspended === 'true';
+                
+                if (isExplicitlySuspended || (isInvalid && newValue !== '---')) { 
+                    parent.classList.add('locked');
+                } else if (val > 1.00) {
+                    parent.classList.remove('locked');
+                }
+            }
+
             const oldValue = previousOdds[key];
             if (oldValue !== undefined && newValue != oldValue) {
                 const isUp = parseFloat(newValue) > parseFloat(oldValue);
-                const colorClass = isUp ? '!text-green-500' : '!text-red-500';
+                const colorClass = isUp ? 'text-green-500' : 'text-red-500';
                 
-                el.innerText = newValue;
+                el.innerText = (isInvalid) ? '---' : newValue;
                 el.classList.add('transition-all', 'duration-300', 'scale-125', colorClass);
                 
                 setTimeout(() => {
                     el.classList.remove('scale-125', colorClass);
                 }, 1500);
             } else {
-                el.innerText = newValue;
+                el.innerText = (isInvalid) ? '---' : newValue;
             }
         }
 
@@ -2730,7 +2807,6 @@ endif; ?>
                 <span class="material-symbols-outlined" style="font-size:18px">arrow_back</span>
             </button>
             <div class="betting-topbar-center">
-                <div class="betting-live-badge"><span class="betting-live-dot"></span>LIVE</div>
                 <h2>Centro Scommesse</h2>
             </div>
         </div>
@@ -2744,30 +2820,50 @@ endif; ?>
     <div class="betting-scoreboard-card">
         <div class="betting-sb-orb betting-sb-orb-1"></div>
         <div class="betting-sb-orb betting-sb-orb-2"></div>
-        <div class="betting-sb-inner">
-            <div class="betting-sb-team">
-                <div class="betting-sb-team-icon blue">
+        <div class="betting-sb-orb betting-sb-orb-3"></div>
+
+        <!-- Main Score Row -->
+        <div class="sb-main-row">
+            <!-- Team 1 -->
+            <div class="sb-team-block">
+                <div class="sb-crest blue">
                     <span class="material-symbols-outlined">shield</span>
                 </div>
-                <div class="betting-sb-team-label">Squadra Blu</div>
-                <div class="betting-sb-score" id="lb-score-s1">0</div>
+                <div class="sb-team-info">
+                    <span class="sb-team-name">Squadra Blu</span>
+                    <div id="lb-players-s1" class="sb-players-list"></div>
+                </div>
             </div>
-            <div class="betting-sb-center">
-                <div class="betting-sb-live-pill"><span class="betting-live-dot"></span> LIVE</div>
-                <div class="betting-sb-vs-badge">VS</div>
+
+            <!-- Score Center -->
+            <div class="sb-score-center">
+                <div class="sb-score-box">
+                    <span class="sb-score-digit" id="lb-score-s1">0</span>
+                    <span class="sb-score-sep">:</span>
+                    <span class="sb-score-digit" id="lb-score-s2">0</span>
+                </div>
+                <div class="sb-live-indicator">
+                    <span class="sb-live-dot"></span>
+                    <span>LIVE</span>
+                </div>
             </div>
-            <div class="betting-sb-team">
-                <div class="betting-sb-team-icon red">
+
+            <!-- Team 2 -->
+            <div class="sb-team-block right">
+                <div class="sb-crest red">
                     <span class="material-symbols-outlined">shield</span>
                 </div>
-                <div class="betting-sb-team-label">Squadra Rossa</div>
-                <div class="betting-sb-score" id="lb-score-s2">0</div>
+                <div class="sb-team-info">
+                    <span class="sb-team-name">Squadra Rossa</span>
+                    <div id="lb-players-s2" class="sb-players-list right"></div>
+                </div>
             </div>
         </div>
-        <div class="betting-sb-players-row">
-            <div id="lb-players-s1" class="betting-sb-players-col"></div>
-            <div style="width:1px;height:24px;background:rgba(255,255,255,0.15)"></div>
-            <div id="lb-players-s2" class="betting-sb-players-col right"></div>
+
+        <!-- Goal Timeline Bar -->
+        <div class="sb-goal-bar">
+            <div class="sb-goal-bar-fill blue" id="lb-goal-bar-s1" style="width:50%"></div>
+            <div class="sb-goal-bar-fill red" id="lb-goal-bar-s2" style="width:50%"></div>
         </div>
     </div>
 
@@ -2800,6 +2896,7 @@ endif; ?>
 
         <!-- ===== PRINCIPALI ===== -->
         <div id="cat-bet-main" class="betting-category">
+
             <div class="betting-market-group">
                 <div class="betting-mkt-header">
                     <div class="betting-mkt-bar" style="background:#3b82f6"></div>
@@ -2830,6 +2927,17 @@ endif; ?>
                         <span class="bet-label">NO</span>
                         <span class="bet-odd" id="odds-deuce-no-modal">---</span>
                     </button>
+                </div>
+            </div>
+
+            <!-- Restructured Active Bets (Modal) -->
+            <div class="active-bets-banner hidden">
+                <div class="betting-mkt-header" style="background:rgba(251,191,36,0.08)">
+                    <div class="betting-mkt-bar" style="background:#fbbf24"></div>
+                    <h3 style="color:#92400e">LE MIE SCOMMESSE</h3>
+                </div>
+                <div class="active-bets-list">
+                    <!-- Rows injected via JS -->
                 </div>
             </div>
         </div>
@@ -3206,6 +3314,58 @@ endif; ?>
         setTimeout(() => modal.classList.add('active'), 10);
         document.body.style.overflow = 'hidden';
         if (typeof window.fetchOdds === 'function') window.fetchOdds();
+        fetchActiveBets();
+    }
+
+    async function fetchActiveBets() {
+        try {
+            // Using literal 'betting_api.php' to avoid scope issues with BETTING_API constant
+            const res = await fetch('betting_api.php?action=active_bets');
+            const data = await res.json();
+            if (data.success) {
+                renderActiveBets(data.bets);
+            }
+        } catch (e) { 
+            console.error("Error fetching active bets", e); 
+        }
+    }
+
+    function renderActiveBets(bets) {
+        const banners = document.querySelectorAll('.active-bets-banner');
+        if (banners.length === 0) return;
+
+        if (!bets || bets.length === 0) {
+            banners.forEach(b => b.classList.add('hidden'));
+            return;
+        }
+
+        banners.forEach(banner => {
+            banner.classList.remove('hidden');
+            const list = banner.querySelector('.active-bets-list');
+            if (!list) return;
+
+            list.innerHTML = '';
+            bets.forEach(bet => {
+                const row = document.createElement('div');
+                row.className = 'active-bet-row';
+                const betName = getBetReadableName(bet.bet_type, bet.bet_value);
+                const quota = parseFloat(bet.quota);
+                const amount = parseInt(bet.amount);
+                const potentialWin = (quota * amount).toFixed(1);
+
+                row.innerHTML = `
+                    <div class="active-bet-main-info">
+                        <div class="active-bet-market">${betName}</div>
+                        <div class="active-bet-details">Quota <strong>${quota.toFixed(2)}</strong> • Puntata <strong>${amount}</strong></div>
+                    </div>
+                    <div class="active-bet-payout">
+                        <div class="active-bet-payout-label">Vincita Potenziale</div>
+                        <div class="active-bet-payout-value">${potentialWin}</div>
+                    </div>
+                `;
+                list.appendChild(row);
+            });
+        });
     }
 
     function closeLiveBettingModal() {
@@ -3350,6 +3510,13 @@ endif; ?>
 
     async function submitModalBet() {
         if (!_activeModalBetType || !_activeModalBetValue) return;
+        
+        // Safety Lock Check
+        if (_activeModalBetElement && _activeModalBetElement.classList.contains('locked')) {
+            showToast('Questa quota è bloccata.', 'error');
+            return;
+        }
+
         const amount = parseInt(document.getElementById('bet-amount-modal').value);
         if (!amount || amount <= 0) { showToast('Inserisci un importo valido', 'error'); return; }
 
@@ -3369,12 +3536,13 @@ endif; ?>
                 showToast(data.message, "success");
                 if (window.confetti) confetti({ particleCount: 150, spread: 70, origin: { y: 0.8 }, colors: ['#2563eb', '#ffffff'] });
                 setTimeout(() => {
-                    closeLiveBettingModal();
+                    closeBetSlip();
                     _activeModalBetType = null;
                     _activeModalBetValue = null;
                     _activeModalBetElement = null;
                     updateBetCardsVisuals();
                     updateBetSlipTrigger();
+                    fetchActiveBets();
                 }, 1000);
             } else {
                 showToast(data.error, "error");
