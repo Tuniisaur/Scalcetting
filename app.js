@@ -3048,8 +3048,37 @@ function updateLiveUI(data) {
     // Update Modal Live Scores if Modal is open
     const modalScore1 = document.getElementById('lb-score-s1');
     const modalScore2 = document.getElementById('lb-score-s2');
-    if(modalScore1) modalScore1.textContent = scoreS1;
-    if(modalScore2) modalScore2.textContent = scoreS2;
+    if(modalScore1) {
+        const oldVal1 = modalScore1.textContent;
+        modalScore1.textContent = scoreS1;
+        if (oldVal1 !== String(scoreS1)) {
+            modalScore1.classList.add('bump');
+            setTimeout(() => modalScore1.classList.remove('bump'), 250);
+        }
+    }
+    if(modalScore2) {
+        const oldVal2 = modalScore2.textContent;
+        modalScore2.textContent = scoreS2;
+        if (oldVal2 !== String(scoreS2)) {
+            modalScore2.classList.add('bump');
+            setTimeout(() => modalScore2.classList.remove('bump'), 250);
+        }
+    }
+
+    // Update Goal Timeline Bar
+    const totalGoals = scoreS1 + scoreS2;
+    const barS1 = document.getElementById('lb-goal-bar-s1');
+    const barS2 = document.getElementById('lb-goal-bar-s2');
+    if (barS1 && barS2) {
+        if (totalGoals === 0) {
+            barS1.style.width = '50%';
+            barS2.style.width = '50%';
+        } else {
+            const pct1 = Math.round((scoreS1 / totalGoals) * 100);
+            barS1.style.width = pct1 + '%';
+            barS2.style.width = (100 - pct1) + '%';
+        }
+    }
 
     const playersS1 = document.getElementById('lb-players-s1');
     const playersS2 = document.getElementById('lb-players-s2');
@@ -3059,25 +3088,21 @@ function updateLiveUI(data) {
         const s2p = players['s2_portiere'];
         const s2a = players['s2_attaccante'];
 
-        const renderPlayerRow = (p, align = 'start') => {
-            if (!p) return `<div class="text-[10px] text-white/30 italic py-0.5">Soglio Libero</div>`;
+        const renderPlayerChip = (p, align = 'start') => {
+            if (!p) return `<div class="sb-player-empty">—</div>`;
             const name = p.id == 9999 ? "Ospite" : p.nome;
-            const avatarHtml = renderAvatar(name, p.avatar_url, 'bg-white/10', 'text-white');
-            const alignClass = align === 'end' ? 'flex-row-reverse text-right' : 'flex-row text-left';
+            const avatarSrc = p.avatar_url ? `<img src="${p.avatar_url}" alt="">` : `<span style="font-size:10px;color:rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:center;width:100%;height:100%">${name.charAt(0).toUpperCase()}</span>`;
+            const colorAttr = p.active_name_color ? `data-color="${p.active_name_color}"` : '';
             return `
-                <div class="flex items-center gap-2 ${alignClass}">
-                    <div class="h-6 w-6 rounded-full overflow-hidden border border-white/10 flex-shrink-0 shadow-sm relative">
-                        ${avatarHtml}
-                    </div>
-                    <div class="min-w-0">
-                        <div class="text-[10px] font-black text-white leading-tight truncate" data-color="${p.active_name_color || ''}">${name}</div>
-                    </div>
+                <div class="sb-player-chip">
+                    <div class="sb-player-avatar">${avatarSrc}</div>
+                    <span class="sb-player-name" ${colorAttr}>${name}</span>
                 </div>
             `;
         };
 
-        playersS1.innerHTML = renderPlayerRow(s1p) + renderPlayerRow(s1a);
-        playersS2.innerHTML = renderPlayerRow(s2p, 'end') + renderPlayerRow(s2a, 'end');
+        playersS1.innerHTML = renderPlayerChip(s1p) + renderPlayerChip(s1a);
+        playersS2.innerHTML = renderPlayerChip(s2p, 'end') + renderPlayerChip(s2a, 'end');
     }
 
     positions.forEach(pos => {
