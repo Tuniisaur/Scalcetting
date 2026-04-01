@@ -108,6 +108,15 @@ if ($action === 'get_history') {
         ]);
     }
 
+    // --- GET ACTIVE BETS ---
+    elseif ($action === 'active_bets') {
+        $stmt = $conn->prepare("SELECT * FROM scommesse WHERE user_id = ? AND status = 'pending' ORDER BY created_at DESC");
+        $stmt->execute([$userId]);
+        $activeBets = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        echo json_encode(['success' => true, 'bets' => $activeBets]);
+    }
+
     // --- PLACE BET ---
     elseif ($action === 'place_bet') {
         $input = json_decode(file_get_contents('php://input'), true);
@@ -168,20 +177,93 @@ if ($action === 'get_history') {
         
         if (!$res['success']) {
             $conn->rollBack();
+            file_put_contents(__DIR__ . '/debug_bet.txt', date('[Y-m-d H:i:s] ') . "Odds Calculation Failed: " . json_encode($res) . "\n", FILE_APPEND);
             echo json_encode($res);
             exit;
         }
 
         $finalQuota = 0;
+        $odds = $res['odds'];
+        
+        // Debug Log
+        $debugData = [
+            'type' => $type,
+            'value' => $value,
+            'amount' => $amount,
+            'match_id' => 1,
+            'activeTable' => $activeTable,
+            's1' => $match['s1_score'] ?? 'null',
+            's2' => $match['s2_score'] ?? 'null',
+            'suspended' => $res['suspended'] ?? []
+        ];
+        file_put_contents(__DIR__ . '/debug_bet.txt', date('[Y-m-d H:i:s] ') . "Attempting Bet: " . json_encode($debugData) . "\n", FILE_APPEND);
+
+        $finalQuota = 0;
+        $odds = $res['odds'];
+
+        $key = '';
         if ($type === 'winner') {
-            if ($value == '1') $finalQuota = $res['odds']['team1'];
-            elseif ($value == '2') $finalQuota = $res['odds']['team2'];
+            $key = ($value == '1' ? 'team1' : 'team2');
         } elseif ($type === 'deuce') {
-            if ($value == 'yes') $finalQuota = $res['odds']['deuce_yes'];
-            elseif ($value == 'no') $finalQuota = $res['odds']['deuce_no'];
+            $key = ($value == 'yes' ? 'deuce_yes' : 'deuce_no');
+        } elseif ($type === 'handicap') {
+            // Frontend: s1_-0.5 -> h1_m05, s2_+1.5 -> h2_p15
+            $t = (strpos($value, 's1') !== false) ? 'h1' : 'h2';
+            $op = (strpos($value, '-') !== false) ? 'm' : 'p';
+            $num = str_replace(['s1', 's2', '_', '-', '+', '.'], '', $value);
+            $key = "{$t}_{$op}{$num}";
+        } elseif ($type === 'over_under') {
+            // Frontend: 8.5_over -> ou85_o
+            $parts = explode('_', $value);
+            if (count($parts) >= 2) {
+                $m = str_replace('.', '', $parts[0]);
+                $o = ($parts[1] === 'over' ? 'o' : 'u');
+                $key = "ou{$m}_{$o}";
+            }
+        } elseif ($type === 'team_over_under') {
+            // Frontend: s1_3.5_over -> t1ou35_o
+            $parts = explode('_', $value); // s1, 3.5, over
+            if (count($parts) >= 3) {
+                $t = ($parts[0] === 's1' ? 't1' : 't2');
+                $m = str_replace('.', '', $parts[1]);
+                $o = ($parts[2] === 'over' ? 'o' : 'u');
+                $key = "{$t}ou{$m}_{$o}";
+            }
+        } elseif ($type === 'btts_threshold') {
+            // Frontend: 5_yes -> btts5_y
+            $parts = explode('_', $value);
+            if (count($parts) >= 2) {
+                $key = "btts" . $parts[0] . "_" . ($parts[1] === 'yes' ? 'y' : 'n');
+            }
+        } elseif ($type === 'deuce_winner') {
+            $key = ($value == '1' ? 'dw1' : 'dw2');
+        } elseif ($type === 'deuce_parity') {
+            // Frontend: 0.5_over -> dp05_o
+            $parts = explode('_', $value);
+            if (count($parts) >= 2) {
+                $m = str_replace('.', '', $parts[0]);
+                $o = ($parts[1] === 'over' ? 'o' : 'u');
+                $key = "dp{$m}_{$o}";
+            }
+        } elseif ($type === 'winning_margin') {
+            $key = "mE" . $value;
+        } elseif ($type === 'winning_diff') {
+            $key = "m" . $value;
+        } elseif ($type === 'exact_score') {
+            $key = "es_" . $value;
+        } elseif ($type === 'combo') {
+            $key = "cmb_" . $value;
+        } elseif (strpos($type, '_yn') !== false) {
+            $base = str_replace('_yn', '', $type);
+            $key = $base . "_" . ($value === 'yes' ? 'y' : 'n');
         }
 
-        if ($finalQuota <= 0) { $conn->rollBack(); echo json_encode(['success'=>false, 'error'=>'Scommessa non valida']); exit; }
+        if ($key && isset($odds[$key])) {
+            $finalQuota = $odds[$key];
+        }
+
+        file_put_contents(__DIR__ . '/debug_bet.txt', date('[Y-m-d H:i:s] ') . "Final Quota: $finalQuota\n", FILE_APPEND);
+        if ($finalQuota <= 1.00) { $conn->rollBack(); echo json_encode(['success'=>false, 'error'=>'Scommessa non valida (quota bloccata)']); exit; }
 
         // Deduct Credits
         $stmtDed = $conn->prepare("UPDATE giocatori SET crediti = crediti - ? WHERE id = ?");
