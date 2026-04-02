@@ -386,7 +386,7 @@ function aggiornaEloEStatistiche($conn, $dati, $tableId = 1)
     $res2 = $dati['vincitore'] == 2 ? 1 : 0;
 
     $stmtB = $conn->prepare("SELECT user_id, item_key FROM live_match_bonuses WHERE match_id = ? AND status = 'active'");
-    $stmtB->execute();
+    $stmtB->execute([$tableId]);
     $bonuses = $stmtB->fetchAll(PDO::FETCH_GROUP | PDO::FETCH_COLUMN);
 
     $getMult = function ($id) use ($bonuses) {
