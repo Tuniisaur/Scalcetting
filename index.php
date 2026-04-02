@@ -3452,18 +3452,49 @@ endif; ?>
              const num = val.split(op)[1];
              return `Handicap ${team} ${op}${num}`;
         }
-        if (type === 'over_under') { const parts = val.split('_'); return `${parts[1].toUpperCase()} ${parts[0]} Goal`; }
+        if (type === 'over_under') { 
+            const parts = val.split('_'); 
+            return `${parts[1].toUpperCase()} ${parts[0]} Goal`; 
+        }
         if (type === 'deuce_winner') return (val === '1' ? 'Blu' : 'Rossa') + ' Vince ai Vantaggi';
-        if (type === 'deuce_parity') { const parts = val.split('_'); return `${parts[1].toUpperCase()} ${parts[0]} Scambi`; }
+        if (type === 'deuce_parity') { 
+            const parts = val.split('_'); 
+            return `${parts[1].toUpperCase()} ${parts[0]} Scambi`; 
+        }
         if (type === 'winning_margin') return `Margine Esatto: ${val} Gol`;
-        if (type === 'winning_diff') { const parts = val.split('_'); const label = parts[0].includes('p') ? parts[0].replace('p', '+') : parts[0]; return `Scarto ${label} Gol: ${parts[1].toUpperCase()}`; }
-        if (type === 'team_over_under') { const parts = val.split('_'); const team = parts[0]==='s1'?'Blu':'Rossa'; return `${team}: ${parts[2].toUpperCase()} ${parts[1]}`; }
-        if (type === 'btts_threshold') { const parts = val.split('_'); return `Entrambe ${parts[0]}+ Gol: ${parts[1].toUpperCase()}`; }
-        if (type === 'cappotto_yn') return `Cappotto: ${val.toUpperCase()}`;
-        if (type === 'consecutive3_yn') return `No 3+ Consec.: ${val.toUpperCase()}`;
-        if (type === 'fgoal_win_yn') return `1° Gol Vince: ${val.toUpperCase()}`;
-        if (type === 'killer_pt_yn') return `Killer Point: ${val.toUpperCase()}`;
-        if (type === 'ribaltone_yn') return `Ribaltone: ${val.toUpperCase()}`;
+        if (type === 'winning_diff') { 
+            const parts = val.split('_'); 
+            const label = parts[0].includes('p') ? parts[0].replace('p', '+') : parts[0]; 
+            return `Scarto ${label} Gol: ${parts[1].toUpperCase()}`; 
+        }
+        if (type === 'team_over_under') { 
+            const parts = val.split('_'); 
+            const team = parts[0]==='s1'?'Blu':'Rossa'; 
+            return `${team}: ${parts[2].toUpperCase()} ${parts[1]}`; 
+        }
+        if (type === 'btts_threshold') { 
+            const parts = val.split('_'); 
+            return `Entrambe ${parts[0]}+ Gol: ${parts[1].toUpperCase()}`; 
+        }
+        
+        // Handle specialized markets with _yn suffix or direct names from backend
+        const specialized = {
+            'cappotto_yn': 'Cappotto',
+            'cappotto': 'Cappotto',
+            'consecutive3_yn': 'No 3+ Consec.',
+            'no_streak3': 'No 3+ Consec.',
+            'fgoal_win_yn': '1° Gol Vince',
+            'fgoal_win': '1° Gol Vince',
+            'killer_pt_yn': 'Killer Point',
+            'killer_pt': 'Killer Point',
+            'ribaltone_yn': 'Ribaltone',
+            'ribaltone': 'Ribaltone'
+        };
+        
+        if (specialized[type]) {
+            return `${specialized[type]}: ${val.toUpperCase()}`;
+        }
+
         if (type === 'exact_score') return `Esatto: ${val}`;
         if (type === 'combo') {
             const parts = val.split('_');
@@ -3478,7 +3509,7 @@ endif; ?>
             else if (cond === 'm3') label = 'MARG. 3+';
             return `${team} + ${label}`;
         }
-        return 'Scommessa';
+        return `Scommessa: ${type}`;
     }
 
     function openBetSlip() {
