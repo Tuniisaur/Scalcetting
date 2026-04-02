@@ -1408,9 +1408,9 @@ async function fetchProfileBettingData() {
                     const statusIcon = bet.status === 'won' ? 'check_circle' :
                         bet.status === 'lost' ? 'cancel' : 'pending';
 
-                    const typeLabel = bet.bet_type === 'winner' ?
-                        (bet.bet_value == '1' ? 'Vince Blu' : 'Vince Rosso') :
-                        (bet.bet_value === 'yes' ? 'Vantaggi: SI' : 'Vantaggi: NO');
+                    const typeLabel = (typeof getBetReadableName === 'function') ? 
+                        getBetReadableName(bet.bet_type, bet.bet_value) : 
+                        bet.bet_type;
 
                     const date = new Date(bet.created_at);
                     const dateStr = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
