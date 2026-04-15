@@ -822,7 +822,7 @@ $currentUserIsAdmin = isAdmin($conn);
              <div id="signedInUser" class="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50 xl:hover:bg-gray-100 xl:dark:hover:bg-gray-700 transition-colors xl:cursor-pointer" onclick="toggleAuthModal()">
                 <div class="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden ring-2 ring-primary/20 flex-shrink-0 relative">
                     <?php if (!empty($_SESSION['user_aura'])): ?>
-                        <div class="absolute inset-[-4px] rounded-full aura-<?php echo $_SESSION['user_aura']; ?> opacity-70 z-0"></div>
+                        <div class="absolute -inset-1 rounded-full aura-<?php echo $_SESSION['user_aura']; ?> opacity-70 z-0"></div>
                     <?php
     endif; ?>
                     <div class="w-full h-full rounded-full overflow-hidden relative z-10 bg-gray-200 dark:bg-gray-700">
@@ -865,7 +865,7 @@ endif; ?>
                         <div class="flex items-center gap-3">
                             <div class="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden ring-2 ring-primary/20 relative">
                                 <?php if (!empty($_SESSION['user_aura'])): ?>
-                                    <div class="absolute inset-[-4px] rounded-full aura-<?php echo $_SESSION['user_aura']; ?> opacity-70 z-0"></div>
+                                    <div class="absolute -inset-1 rounded-full aura-<?php echo $_SESSION['user_aura']; ?> opacity-70 z-0"></div>
                                 <?php
     endif; ?>
                                 <div class="w-full h-full rounded-full overflow-hidden relative z-10 bg-gray-200 dark:bg-gray-700">
@@ -1854,6 +1854,7 @@ endif; ?>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="app.js?v=<?php echo time(); ?>"></script>
     <script src="shop.js?v=<?php echo time(); ?>"></script>
+    <script src="aura-engine.js?v=<?php echo time(); ?>"></script>
 
     <div id="playerDetailsModal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true">
 
@@ -1869,7 +1870,7 @@ endif; ?>
 
                     <div class="flex flex-col items-center">
                         <div class="relative mb-3">
-                            <div id="pd-aura" class="absolute inset-[-8px] rounded-full opacity-70 z-0"></div>
+                            <div id="pd-aura" class="absolute -inset-2 rounded-full opacity-70 z-0"></div>
                             <div class="h-24 w-24 rounded-full p-1 shadow-lg ring-4 ring-gray-100 dark:ring-gray-700 bg-white dark:bg-gray-800 overflow-hidden relative z-10">
                                 <div id="pd-avatar-container" class="w-full h-full rounded-full overflow-hidden"></div>
                             </div>
