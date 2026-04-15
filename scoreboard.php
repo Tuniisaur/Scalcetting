@@ -107,106 +107,402 @@ $conn = $db->getConnection();
             border-radius: 2px;
         }
 
-        /* --- Aesthetic Customizations --- */
+        /* --- Aesthetic Customizations: data-aura on avatar containers --- */
+
+        /* ── FLARE (on avatar border) ── */
         [data-aura="flare"] {
-            box-shadow: 0 0 15px 5px rgba(251, 191, 36, 0.6), 0 0 30px 10px rgba(251, 191, 36, 0.3);
-            animation: aura-flare-pulse 2s infinite alternate ease-in-out;
+            box-shadow:
+                0 0 12px 4px rgba(251, 191, 36, 0.6),
+                0 0 25px 8px rgba(251, 191, 36, 0.3),
+                inset 0 0 8px rgba(255, 223, 100, 0.2);
+            animation: data-aura-flare 3s ease-in-out infinite;
             border-color: #fbbf24 !important;
         }
-        @keyframes aura-flare-pulse {
-            0% { box-shadow: 0 0 10px 2px rgba(251, 191, 36, 0.4); transform: scale(1); }
-            100% { box-shadow: 0 0 25px 8px rgba(251, 191, 36, 0.7); transform: scale(1.02); }
+        @keyframes data-aura-flare {
+            0%, 100% { box-shadow: 0 0 10px 3px rgba(251, 191, 36, 0.5), 0 0 20px 6px rgba(251, 191, 36, 0.2); transform: scale(1); }
+            35% { box-shadow: 0 0 18px 6px rgba(255, 223, 100, 0.8), 0 0 35px 12px rgba(251, 191, 36, 0.4); transform: scale(1.03); }
+            70% { box-shadow: 0 0 14px 5px rgba(245, 158, 11, 0.6), 0 0 28px 9px rgba(251, 191, 36, 0.3); transform: scale(1.01); }
         }
+
+        /* ── FIRE (on avatar border — multi-layer corona) ── */
         [data-aura="fire"] {
             position: relative;
-            box-shadow: 0 0 20px #ff4d00;
+            box-shadow: 0 0 15px 5px rgba(255, 80, 0, 0.6), 0 0 30px 10px rgba(255, 30, 0, 0.3);
             border-color: #ff4d00 !important;
+            animation: data-aura-fire-glow 2s ease-in-out infinite alternate;
         }
         [data-aura="fire"]::after {
             content: '';
             position: absolute;
-            inset: -15px;
+            inset: -12px;
             border-radius: 50%;
-            background: 
-                radial-gradient(circle at var(--c1-x, 50%) var(--c1-y, 20%), #ff4d00 0%, #ff0000 40%, transparent 60%),
-                radial-gradient(circle at var(--c2-x, 80%) var(--c2-y, 35%), #ff4d00 0%, #ff0000 40%, transparent 60%),
-                radial-gradient(circle at var(--c3-x, 90%) var(--c3-y, 65%), #ff4d00 0%, #ff0000 40%, transparent 60%),
-                radial-gradient(circle at var(--c4-x, 65%) var(--c4-y, 90%), #ff4d00 0%, #ff0000 40%, transparent 60%),
-                radial-gradient(circle at var(--c5-x, 35%) var(--c5-y, 90%), #ff4d00 0%, #ff0000 40%, transparent 60%),
-                radial-gradient(circle at var(--c6-x, 10%) var(--c6-y, 65%), #ff4d00 0%, #ff0000 40%, transparent 60%),
-                radial-gradient(circle at var(--c7-x, 20%) var(--c7-y, 35%), #ff4d00 0%, #ff0000 40%, transparent 60%),
-                radial-gradient(circle at var(--c8-x, 50%) var(--c8-y, 50%), #ff4d00 0%, #ff0000 70%, transparent 75%);
-            background-size: 100% 100%;
-            filter: blur(4px) contrast(20);
+            background: radial-gradient(ellipse 100% 130% at 50% 60%,
+                rgba(255, 255, 80, 0.7) 0%, rgba(255, 160, 0, 0.6) 20%,
+                rgba(255, 80, 0, 0.4) 45%, rgba(200, 0, 0, 0.2) 65%, transparent 85%);
+            filter: blur(4px);
             z-index: -2;
-            animation: fire-corona 2s infinite ease-in-out;
-            opacity: 1;
+            animation: data-aura-fire-corona 2s ease-in-out infinite;
             mix-blend-mode: screen;
         }
         [data-aura="fire"]::before {
             content: '';
             position: absolute;
-            inset: -8px;
+            inset: -6px;
             border-radius: 50%;
-            background: radial-gradient(circle, transparent 60%, rgba(255, 255, 0, 0.4) 70%, #ffff00 85%, #ff8c00 100%);
+            background: radial-gradient(circle, transparent 55%, rgba(255, 200, 0, 0.35) 70%, rgba(255, 140, 0, 0.5) 85%, rgba(255, 80, 0, 0.3) 100%);
             filter: blur(2px);
             z-index: -1;
-            animation: fire-corona-inner 1s infinite alternate ease-in-out;
+            animation: data-aura-fire-inner 1.2s ease-in-out infinite alternate;
         }
-        @keyframes fire-corona {
-            0%, 100% { 
-                --c1-y: 20%; --c2-x: 80%; --c3-y: 65%; --c4-x: 65%;
-                --c5-y: 90%; --c6-x: 10%; --c7-y: 35%; --c8-x: 50%;
-                transform: rotate(0deg) scale(1);
-            }
-            50% {
-                --c1-y: 15%; --c2-x: 85%; --c3-y: 70%; --c4-x: 70%;
-                --c5-y: 95%; --c6-x: 5%; --c7-y: 30%; --c8-x: 52%;
-                transform: rotate(180deg) scale(1.1);
-            }
+        @keyframes data-aura-fire-glow {
+            0% { box-shadow: 0 0 12px 4px rgba(255, 80, 0, 0.5), 0 0 25px 8px rgba(255, 30, 0, 0.2); }
+            100% { box-shadow: 0 0 20px 7px rgba(255, 100, 0, 0.7), 0 0 40px 14px rgba(255, 50, 0, 0.4), 0 -6px 15px rgba(255, 180, 0, 0.3); }
         }
-        @keyframes fire-corona-inner {
-            0% { transform: scale(1); opacity: 0.6; }
-            100% { transform: scale(1.05); opacity: 1; }
+        @keyframes data-aura-fire-corona {
+            0%, 100% { transform: scaleX(0.95) scaleY(0.9); opacity: 0.7; }
+            25% { transform: scaleX(1.05) scaleY(1.12); opacity: 0.95; }
+            50% { transform: scaleX(0.98) scaleY(1.03); opacity: 0.8; }
+            75% { transform: scaleX(1.08) scaleY(0.95); opacity: 0.9; }
+        }
+        @keyframes data-aura-fire-inner {
+            0% { transform: scale(1); opacity: 0.5; }
+            100% { transform: scale(1.06); opacity: 0.85; }
+        }
+
+        /* ── VOID (on avatar border — dark singularity) ── */
+        [data-aura="void"] {
+            box-shadow:
+                0 0 18px 6px rgba(88, 28, 135, 0.6),
+                0 0 35px 12px rgba(30, 0, 60, 0.35),
+                inset 0 0 10px rgba(0, 0, 0, 0.5);
+            border-color: #7c3aed !important;
+            animation: data-aura-void 4s ease-in-out infinite alternate;
+        }
+        @keyframes data-aura-void {
+            0% { box-shadow: 0 0 12px 4px rgba(88, 28, 135, 0.5), 0 0 25px 8px rgba(30, 0, 60, 0.25), inset 0 0 8px rgba(0, 0, 0, 0.6); transform: scale(1); }
+            50% { box-shadow: 0 0 22px 8px rgba(139, 92, 246, 0.6), 0 0 45px 16px rgba(88, 28, 135, 0.4), inset 0 0 15px rgba(0, 0, 0, 0.4); }
+            100% { box-shadow: 0 0 16px 6px rgba(168, 85, 247, 0.55), 0 0 35px 12px rgba(88, 28, 135, 0.3), inset 0 0 12px rgba(0, 0, 0, 0.5); transform: scale(1.02); }
+        }
+
+        /* ── STORM (on avatar border — electric crackle) ── */
+        [data-aura="storm"] {
+            box-shadow:
+                0 0 10px 3px rgba(34, 211, 238, 0.6),
+                0 0 22px 7px rgba(14, 165, 233, 0.35),
+                0 0 40px 12px rgba(37, 99, 235, 0.15);
+            border-color: #22d3ee !important;
+            animation: data-aura-storm-crackle 0.15s steps(2, end) infinite, data-aura-storm-surge 2s ease-in-out infinite;
+        }
+        @keyframes data-aura-storm-crackle {
+            0%   { box-shadow: 0 0 8px 2px rgba(34, 211, 238, 0.5), 0 0 18px 6px rgba(14, 165, 233, 0.25); }
+            50%  { box-shadow: 0 0 14px 5px rgba(34, 211, 238, 0.9), 0 0 30px 10px rgba(14, 165, 233, 0.6), 0 0 50px 16px rgba(37, 99, 235, 0.25); }
+            100% { box-shadow: 0 0 10px 3px rgba(34, 211, 238, 0.6), 0 0 22px 7px rgba(14, 165, 233, 0.35); }
+        }
+        @keyframes data-aura-storm-surge {
+            0%, 100% { transform: scale(1); }
+            30% { transform: scale(1.04); }
+            60% { transform: scale(0.99); }
         }
         [data-color="gold"] {
-            background: linear-gradient(to right, #bf953f, #fcf6ba, #b38728, #fbf5b7, #aa771c) !important;
+            background: linear-gradient(90deg, #bf953f, #fcf6ba, #b38728, #fbf5b7, #aa771c) !important;
+            background-size: 200% auto !important;
             -webkit-background-clip: text !important;
             background-clip: text !important;
             -webkit-text-fill-color: transparent !important;
             font-weight: 800 !important;
-            filter: drop-shadow(0 0 1px rgba(191, 149, 63, 0.5)) !important;
+            animation: gold-shine 2s linear infinite, gold-pulse 1s ease-in-out infinite alternate !important;
+            text-shadow: 0 0 2px rgba(191, 149, 63, 0.4) !important;
+            display: inline-block !important;
+        }
+        @keyframes gold-shine {
+            from { background-position: 0% center; }
+            to { background-position: 200% center; }
+        }
+        @keyframes gold-pulse {
+            from { 
+                text-shadow: 0 0 1px rgba(191, 149, 63, 0.4); 
+                transform: scale(1);
+            }
+            to { 
+                text-shadow: 0 0 5px rgba(251, 245, 183, 0.8); 
+                transform: scale(1.02);
+            }
         }
         [data-color="neon"] {
-            color: #ff00ff !important;
-            text-shadow: 0 0 5px #ff00ff, 0 0 10px #ff00ff, 0 0 20px #ff00ff !important;
+            color: #fff !important;
+            text-shadow: 0 0 7px #fff, 0 0 10px #fff, 0 0 21px #ff00ff, 0 0 42px #ff00ff, 0 0 82px #ff00ff, 0 0 92px #ff00ff, 0 0 102px #ff00ff !important;
             font-weight: 800 !important;
+            letter-spacing: 0.02em !important;
+            animation: neon-flicker 2s infinite alternate, neon-pulse 1.5s infinite alternate !important;
+        }
+        @keyframes neon-pulse {
+            from { text-shadow: 0 0 7px #fff, 0 0 10px #fff, 0 0 21px #ff00ff, 0 0 42px #ff00ff; opacity: 0.9; }
+            to { text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 60px #ff00ff, 0 0 100px #ff00ff; filter: brightness(1.5) contrast(1.2); opacity: 1; }
+        }
+        @keyframes neon-flicker {
+            0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { text-shadow: 0 0 2px #fff, 0 0 5px #ff00ff, 0 0 10px #ff00ff, 0 0 20px #ff00ff, 1px 1px 2px rgba(0, 0, 0, 0.3); }
+            20%, 24%, 55% { text-shadow: none; opacity: 0.8; }
         }
         [data-color="rainbow"] {
-            background: linear-gradient(to right, #ef4444, #f59e0b, #10b981, #3b82f6, #6366f1, #8b5cf6, #ef4444) !important;
+            display: inline-block !important;
+            background: linear-gradient(90deg, #ef4444, #f59e0b, #10b981, #3b82f6, #6366f1, #8b5cf6, #ef4444) !important;
+            background-size: 200% auto !important;
             -webkit-background-clip: text !important;
             background-clip: text !important;
             -webkit-text-fill-color: transparent !important;
             font-weight: 800 !important;
+            text-shadow: 0 0 1px rgba(0, 0, 0, 0.1) !important;
+            animation: rainbow-shimmer 2.5s linear infinite !important;
+        }
+        @keyframes rainbow-shimmer {
+            from { background-position: 0% center; }
+            to { background-position: 200% center; }
         }
         [data-color="lime"] { color: #84cc16 !important; text-shadow: 0 0 8px rgba(132, 204, 22, 0.4) !important; font-weight: 800 !important; }
         [data-color="red"] { color: #ef4444 !important; text-shadow: 0 0 8px rgba(239, 68, 68, 0.4) !important; font-weight: 800 !important; }
         [data-color="orange"] { color: #f97316 !important; text-shadow: 0 0 8px rgba(249, 115, 22, 0.4) !important; font-weight: 800 !important; }
+        [data-color="plasma"] {
+            color: #fff !important;
+            text-shadow: 0 0 4px #fff, 0 0 8px #22d3ee, 0 0 16px #22d3ee, 0 0 32px #22d3ee !important;
+            font-weight: 900 !important;
+            animation: plasma-pulse 1.5s ease-in-out infinite alternate !important;
+        }
+        @keyframes plasma-pulse {
+            from { filter: brightness(1) drop-shadow(0 0 2px #22d3ee); }
+            to { filter: brightness(1.5) drop-shadow(0 0 8px #22d3ee); }
+        }
+        [data-color="emerald"] {
+            display: inline-block !important;
+            background: linear-gradient(135deg, #064e3b 0%, #059669 25%, #34d399 50%, #6ee7b7 60%, #34d399 70%, #059669 85%, #064e3b 100%) !important;
+            background-size: 200% auto !important;
+            -webkit-background-clip: text !important;
+            background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            font-weight: 800 !important;
+            animation: emerald-shimmer 3s linear infinite, emerald-float 3s ease-in-out infinite alternate !important;
+            text-shadow: 0 0 2px rgba(5, 150, 105, 0.4) !important;
+        }
+        @keyframes emerald-float {
+            from { transform: translateY(0) scale(1); text-shadow: 0 0 2px rgba(5, 150, 105, 0.4); }
+            to { transform: translateY(-2px) scale(1.05); text-shadow: 0 0 8px rgba(52, 211, 153, 0.8); }
+        }
+        @keyframes emerald-shimmer {
+            from { background-position: 0% center; }
+            to { background-position: 200% center; }
+        }
 
+        [data-style="pixel"] {
+            font-family: 'Press Start 2P', cursive !important;
+            font-size: 0.6em !important;
+            line-height: 1.2 !important;
+            letter-spacing: -1px !important;
+            -webkit-font-smoothing: none !important;
+            image-rendering: auto !important;
+            display: inline-block;
+        }
+
+        [data-style="chinese"] {
+            font-family: 'Noto Sans SC', sans-serif !important;
+            font-weight: 700 !important;
+            color: #e60000 !important;
+            text-shadow: 1px 1px 0px rgba(0,0,0,0.2) !important;
+        }
+
+        [data-style="russian"] {
+            font-family: 'Ruslan Display', cursive !important;
+            color: #0039a6 !important;
+            text-shadow: 1px 1px 0px #fff !important;
+            letter-spacing: 1px !important;
+            text-transform: uppercase !important;
+        }
+
+        [data-style="arabic"] {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+            font-weight: bold !important;
+            direction: rtl !important;
+            unicode-bidi: bidi-override !important;
+        }
+
+        [data-style="glitch"] {
+            display: inline-block !important;
+            position: relative !important;
+            background: none !important;
+            -webkit-background-clip: initial !important;
+            background-clip: initial !important;
+            -webkit-text-fill-color: initial !important;
+            color: #000 !important;
+            text-shadow: 0.05em 0 0 #00fffc, -0.03em -0.04em 0 #fc00ff, 0.025em 0.04em 0 #fffc00 !important;
+            animation: glitch 725ms infinite, glitch-wobble 2s infinite !important;
+        }
+
+        @keyframes glitch-wobble {
+            0% { transform: translate(0); }
+            10% { transform: translate(-1px, 1px); }
+            20% { transform: translate(0); }
+            30% { transform: translate(1px, -1px); }
+            40% { transform: translate(0); }
+        }
+
+        @keyframes glitch {
+            0% { text-shadow: 0.05em 0 0 #00fffc, -0.03em -0.04em 0 #fc00ff, 0.025em 0.04em 0 #fffc00; clip-path: inset(50% 0 30% 0); }
+            15% { text-shadow: -0.05em -0.025em 0 #00fffc, 0.025em 0.035em 0 #fc00ff, -0.05em -0.05em 0 #fffc00; clip-path: inset(10% 0 80% 0); }
+            30% { text-shadow: 0.05em 0.035em 0 #00fffc, 0.03em 0 0 #fc00ff, 0 -0.04em 0 #fffc00; clip-path: inset(80% 0 5% 0); }
+            45% { text-shadow: -0.05em 0 0 #00fffc, -0.025em -0.04em 0 #fc00ff, -0.04em -0.025em 0 #fffc00; clip-path: inset(30% 0 60% 0); }
+            60% { text-shadow: 0.05em 0 0 #00fffc, -0.03em -0.04em 0 #fc00ff, 0.025em 0.04em 0 #fffc00; clip-path: inset(0% 0 0% 0); }
+            100% { text-shadow: -0.05em 0 0 #00fffc, -0.025em -0.04em 0 #fc00ff, -0.04em -0.025em 0 #fffc00; clip-path: inset(0% 0 0% 0); }
+        }
+
+        /* ── AURA SYSTEM v3 (Scoreboard Overlays) ── */
+
+        /* FLARE — Solar Corona with spinning rays */
         .aura-flare {
-            background: radial-gradient(circle, rgba(99, 102, 241, 0.6) 0%, rgba(99, 102, 241, 0) 70%) !important;
-            filter: blur(8px) !important;
-            animation: aura-pulse 2s ease-in-out infinite !important;
+            background: conic-gradient(from 0deg,
+                rgba(255,210,60,0.95) 0deg, rgba(251,191,36,0.1) 18deg,
+                rgba(255,220,80,0.9) 36deg, rgba(251,191,36,0.08) 54deg,
+                rgba(255,200,50,0.92) 72deg, rgba(251,191,36,0.1) 90deg,
+                rgba(255,215,70,0.85) 108deg, rgba(251,191,36,0.06) 126deg,
+                rgba(255,210,60,0.9) 144deg, rgba(251,191,36,0.1) 162deg,
+                rgba(255,220,80,0.88) 180deg, rgba(251,191,36,0.08) 198deg,
+                rgba(255,200,50,0.92) 216deg, rgba(251,191,36,0.1) 234deg,
+                rgba(255,215,70,0.85) 252deg, rgba(251,191,36,0.06) 270deg,
+                rgba(255,210,60,0.9) 288deg, rgba(251,191,36,0.1) 306deg,
+                rgba(255,220,80,0.88) 324deg, rgba(251,191,36,0.08) 342deg,
+                rgba(255,210,60,0.95) 360deg) !important;
+            filter: blur(4px) !important;
+            animation: flare-spin 10s linear infinite !important;
+            border-radius: 50% !important;
+            mix-blend-mode: screen !important;
+            overflow: visible !important;
         }
+        .aura-flare::before {
+            content: '' !important; position: absolute !important; inset: 12% !important; border-radius: 50% !important;
+            background: radial-gradient(circle, rgba(255,245,170,0.95) 0%, rgba(251,191,36,0.6) 40%, rgba(245,158,11,0.2) 70%, transparent 100%) !important;
+            filter: blur(2px) !important; animation: flare-core-pulse 3s ease-in-out infinite alternate !important;
+        }
+        .aura-flare::after {
+            content: '' !important; position: absolute !important; inset: -4px !important; border-radius: 50% !important; background: transparent !important;
+            box-shadow: 0 0 15px 6px rgba(251,191,36,0.5), 0 0 35px 12px rgba(251,191,36,0.25), 0 0 55px 20px rgba(251,191,36,0.1) !important;
+            animation: flare-halo-pulse 4s ease-in-out infinite alternate !important;
+        }
+        @keyframes flare-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes flare-core-pulse { 0% { opacity: 0.6; transform: scale(0.93); } 100% { opacity: 1; transform: scale(1.06); } }
+        @keyframes flare-halo-pulse { 0% { opacity: 0.35; transform: scale(0.97); } 100% { opacity: 0.75; transform: scale(1.04); } }
+
+        /* FIRE — Organic flame tongues + rising sparks */
         .aura-fire {
-            background: radial-gradient(circle, rgba(245, 158, 11, 0.6) 0%, rgba(245, 158, 11, 0) 70%) !important;
-            filter: blur(8px) !important;
-            animation: aura-pulse 1.5s ease-in-out infinite alternate !important;
+            background: radial-gradient(ellipse 100% 140% at 50% 70%,
+                rgba(255,255,80,0.95) 0%, rgba(255,180,0,0.85) 15%, rgba(255,80,0,0.7) 35%,
+                rgba(200,20,0,0.45) 55%, rgba(100,0,0,0.15) 75%, transparent 90%) !important;
+            filter: url(#aura-fire-turb) blur(2px) !important;
+            animation: fire-flicker 0.1s ease-in-out infinite alternate, fire-morph 2.5s ease-in-out infinite !important;
+            border-radius: 42% 58% 45% 55% / 38% 42% 58% 62% !important;
+            mix-blend-mode: screen !important; overflow: visible !important;
+            box-shadow: 0 -6px 12px rgba(255,180,0,0.5), 0 0 20px 6px rgba(255,80,0,0.4), 0 0 40px 12px rgba(200,0,0,0.2) !important;
         }
-        @keyframes aura-pulse {
-            0% { transform: scale(0.8); opacity: 0.5; }
-            50% { transform: scale(1.2); opacity: 0.8; }
-            100% { transform: scale(0.8); opacity: 0.5; }
+        .aura-fire::before {
+            content: '' !important; position: absolute !important; inset: 5% 10% 15% 8% !important;
+            border-radius: 55% 45% 50% 50% / 40% 50% 50% 60% !important;
+            background: radial-gradient(ellipse 120% 150% at 45% 65%, rgba(255,255,120,0.9) 0%, rgba(255,140,0,0.7) 25%, rgba(255,60,0,0.4) 50%, transparent 75%) !important;
+            filter: blur(2px) !important; animation: fire-morph-alt 2s ease-in-out infinite 0.4s !important;
+        }
+        .aura-fire::after {
+            content: '' !important; position: absolute !important; width: 5px !important; height: 5px !important;
+            top: 15% !important; left: 50% !important; border-radius: 50% !important; background: #ffff80 !important; filter: blur(1px) !important;
+            box-shadow: 12px -8px 4px 1px #ff8c00, -10px -14px 3px 1px rgba(255,200,0,0.9), 18px -18px 5px 0 #ff6600,
+                -15px -6px 3px 1px rgba(255,160,0,0.8), 6px -22px 4px 0 #ffcc00, -8px -26px 3px 1px rgba(255,120,0,0.7),
+                20px -12px 4px 0 rgba(255,200,50,0.9), -18px -20px 5px 0 #ff4400 !important;
+            animation: fire-sparks 1.5s ease-out infinite !important;
+        }
+        @keyframes fire-flicker { 0% { opacity: 0.75; filter: url(#aura-fire-turb) blur(2px) brightness(1.1); } 100% { opacity: 1; filter: url(#aura-fire-turb) blur(3px) brightness(1.5); } }
+        @keyframes fire-morph {
+            0%   { border-radius: 42% 58% 45% 55% / 38% 42% 58% 62%; transform: scaleX(0.94) scaleY(0.9); }
+            20%  { border-radius: 55% 45% 52% 48% / 50% 38% 62% 50%; transform: scaleX(1.06) scaleY(1.14); }
+            40%  { border-radius: 48% 52% 40% 60% / 44% 55% 45% 56%; transform: scaleX(0.98) scaleY(1.04); }
+            60%  { border-radius: 52% 48% 58% 42% / 55% 45% 55% 45%; transform: scaleX(1.1) scaleY(0.92); }
+            80%  { border-radius: 45% 55% 50% 50% / 40% 48% 52% 60%; transform: scaleX(0.96) scaleY(1.08); }
+            100% { border-radius: 42% 58% 45% 55% / 38% 42% 58% 62%; transform: scaleX(0.94) scaleY(0.9); }
+        }
+        @keyframes fire-morph-alt {
+            0%   { border-radius: 55% 45% 50% 50% / 40% 50% 50% 60%; transform: scaleX(0.9) scaleY(0.85); opacity: 0.6; }
+            30%  { border-radius: 45% 55% 55% 45% / 48% 42% 58% 52%; transform: scaleX(1.08) scaleY(1.1); opacity: 0.9; }
+            60%  { border-radius: 50% 50% 42% 58% / 55% 45% 55% 45%; transform: scaleX(0.95) scaleY(1.0); opacity: 0.7; }
+            100% { border-radius: 55% 45% 50% 50% / 40% 50% 50% 60%; transform: scaleX(0.9) scaleY(0.85); opacity: 0.6; }
+        }
+        @keyframes fire-sparks { 0% { transform: translateY(0) scale(1); opacity: 1; } 50% { opacity: 0.8; } 100% { transform: translateY(-18px) scale(0.3); opacity: 0; } }
+
+        /* VOID — Spinning dark vortex with event horizon */
+        .aura-void {
+            background: conic-gradient(from 0deg,
+                rgba(88,28,135,0.8) 0deg, transparent 25deg, rgba(139,92,246,0.6) 50deg, transparent 75deg,
+                rgba(88,28,135,0.7) 100deg, transparent 125deg, rgba(168,85,247,0.5) 150deg, transparent 175deg,
+                rgba(88,28,135,0.75) 200deg, transparent 225deg, rgba(139,92,246,0.6) 250deg, transparent 275deg,
+                rgba(88,28,135,0.7) 300deg, transparent 325deg, rgba(168,85,247,0.55) 350deg, rgba(88,28,135,0.8) 360deg) !important;
+            filter: url(#aura-void-turb) blur(4px) !important;
+            animation: void-rotate 8s linear infinite reverse !important;
+            border-radius: 50% !important; mix-blend-mode: normal !important; overflow: visible !important;
+            box-shadow: 0 0 25px 8px rgba(88,28,135,0.4), 0 0 50px 15px rgba(30,0,60,0.2) !important;
+        }
+        .aura-void::before {
+            content: '' !important; position: absolute !important; inset: 20% !important; border-radius: 50% !important;
+            background: radial-gradient(circle, rgba(0,0,0,0.95) 0%, rgba(15,0,30,0.85) 40%, rgba(40,0,70,0.5) 70%, transparent 100%) !important;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.9) !important; animation: void-core-pulse 5s ease-in-out infinite alternate !important;
+        }
+        .aura-void::after {
+            content: '' !important; position: absolute !important; inset: -6px !important; border-radius: 50% !important; background: transparent !important;
+            box-shadow: inset 0 0 12px 4px rgba(139,92,246,0.4), 0 0 18px 6px rgba(88,28,135,0.45), 0 0 35px 12px rgba(30,0,60,0.25) !important;
+            animation: void-horizon-pulse 4s ease-in-out infinite alternate !important;
+        }
+        @keyframes void-rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes void-core-pulse { 0% { transform: scale(0.9); opacity: 0.7; } 100% { transform: scale(1.1); opacity: 1; } }
+        @keyframes void-horizon-pulse {
+            0% { box-shadow: inset 0 0 10px 3px rgba(139,92,246,0.3), 0 0 15px 5px rgba(88,28,135,0.35), 0 0 30px 10px rgba(30,0,60,0.2); }
+            100% { box-shadow: inset 0 0 15px 6px rgba(168,85,247,0.5), 0 0 25px 10px rgba(139,92,246,0.5), 0 0 50px 18px rgba(88,28,135,0.3); }
+        }
+
+        /* STORM — Lightning bolts + electric strobe */
+        .aura-storm {
+            background: radial-gradient(circle, rgba(200,240,255,0.7) 0%, rgba(34,211,238,0.65) 20%,
+                rgba(14,165,233,0.4) 45%, rgba(37,99,235,0.2) 65%, transparent 85%) !important;
+            filter: url(#aura-storm-turb) blur(3px) !important;
+            animation: storm-base-flash 3s ease-in-out infinite !important;
+            border-radius: 50% !important; mix-blend-mode: screen !important; overflow: visible !important;
+            box-shadow: 0 0 10px 3px rgba(34,211,238,0.5), 0 0 25px 8px rgba(14,165,233,0.3) !important;
+        }
+        .aura-storm::before {
+            content: '' !important; position: absolute !important; inset: -10px !important;
+            background: linear-gradient(180deg, #fff 0%, #67e8f9 40%, #3b82f6 100%) !important;
+            clip-path: polygon(48% 2%,52% 2%, 54% 12%,60% 12%, 52% 28%,58% 28%, 50% 42%,55% 42%,
+                48% 55%,52% 55%, 46% 68%,50% 68%, 44% 82%,48% 82%, 42% 98%,46% 98%) !important;
+            filter: blur(0.5px) !important; animation: bolt-flash-1 4s steps(1) infinite !important;
+            opacity: 0 !important; z-index: 1 !important;
+        }
+        .aura-storm::after {
+            content: '' !important; position: absolute !important; inset: -10px !important;
+            background: linear-gradient(225deg, #fff 0%, #67e8f9 40%, #6366f1 100%) !important;
+            clip-path: polygon(82% 10%,86% 10%, 78% 22%,84% 22%, 76% 38%,80% 38%, 72% 52%,76% 52%,
+                68% 66%,72% 66%, 64% 78%,68% 78%, 60% 90%,64% 90%) !important;
+            filter: blur(0.5px) !important; animation: bolt-flash-2 4s steps(1) infinite 1.2s !important;
+            opacity: 0 !important; z-index: 1 !important;
+        }
+        @keyframes storm-base-flash {
+            0%, 100% { filter: url(#aura-storm-turb) blur(3px) brightness(1); box-shadow: 0 0 10px 3px rgba(34,211,238,0.5), 0 0 25px 8px rgba(14,165,233,0.3); }
+            9% { filter: url(#aura-storm-turb) blur(1px) brightness(2.5); box-shadow: 0 0 20px 8px rgba(34,211,238,0.9), 0 0 40px 15px rgba(14,165,233,0.6), 0 0 60px 25px rgba(37,99,235,0.3); }
+            12% { filter: url(#aura-storm-turb) blur(3px) brightness(1); }
+            14% { filter: url(#aura-storm-turb) blur(1px) brightness(2); box-shadow: 0 0 18px 6px rgba(34,211,238,0.8), 0 0 35px 12px rgba(14,165,233,0.5); }
+            16% { filter: url(#aura-storm-turb) blur(3px) brightness(1); }
+            39% { filter: url(#aura-storm-turb) blur(1px) brightness(2.2); box-shadow: 0 0 20px 8px rgba(34,211,238,0.85), 0 0 40px 15px rgba(14,165,233,0.55); }
+            42% { filter: url(#aura-storm-turb) blur(3px) brightness(1); }
+            69% { filter: url(#aura-storm-turb) blur(1px) brightness(1.8); box-shadow: 0 0 15px 6px rgba(34,211,238,0.75), 0 0 30px 12px rgba(14,165,233,0.4); }
+            72% { filter: url(#aura-storm-turb) blur(3px) brightness(1); }
+        }
+        @keyframes bolt-flash-1 {
+            0%,8% { opacity:0; } 9% { opacity:1; } 11% { opacity:0; } 13% { opacity:0.8; } 15% { opacity:0; }
+            38% { opacity:0; } 39% { opacity:0.9; } 41% { opacity:0; } 68% { opacity:0; } 69% { opacity:1; } 71% { opacity:0; } 100% { opacity:0; }
+        }
+        @keyframes bolt-flash-2 {
+            0%,5% { opacity:0; } 6% { opacity:1; } 8% { opacity:0; } 10% { opacity:0.7; } 12% { opacity:0; }
+            30% { opacity:0; } 31% { opacity:0.9; } 33% { opacity:0; } 55% { opacity:0; } 56% { opacity:1; } 58% { opacity:0; }
+            60% { opacity:0.6; } 62% { opacity:0; } 100% { opacity:0; }
         }
         .player-title {
             font-size: 0.65rem;
@@ -422,7 +718,7 @@ $conn = $db->getConnection();
             return `
             <div class="flex flex-col items-center">
                 <div class="relative mb-2">
-                    ${player.active_aura ? `<div class="absolute inset-[-6px] rounded-full aura-${player.active_aura} opacity-70 z-0"></div>` : ''}
+                    ${player.active_aura ? `<div class="absolute -inset-1\.5 rounded-full aura-${player.active_aura} opacity-70 z-0"></div>` : ''}
                     <div class="h-16 w-16 md:h-16 md:w-16 lg:h-24 lg:w-24 rounded-2xl glass-panel border-2 ${borderColor} relative group shadow-sm bg-white/40 z-10">
                         <div class="w-full h-full rounded-2xl overflow-hidden">
                             ${avatarHtml}
@@ -435,7 +731,7 @@ $conn = $db->getConnection();
                 </div>
                 <div class="flex flex-col items-center">
                     <span class="text-sm md:text-base lg:text-lg font-black text-slate-800 tracking-tight leading-none mb-1">
-                        <span data-color="${player.active_name_color || ''}">${player.nome}</span>
+                        <span data-color="${player.active_name_color || ''}" data-style="${player.active_name_style || ''}">${player.nome}</span>
                     </span>
                     ${player.active_title ? `<div class="player-title" data-color="${player.active_name_color || ''}">${player.active_title}</div>` : ''}
                     <span class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] italic mt-0.5">${roleStr}</span>
@@ -576,7 +872,7 @@ $conn = $db->getConnection();
                         </div>
                     </div>
                     <span class="font-black text-xl md:text-2xl text-white uppercase italic tracking-tighter">
-                        <span data-color="${p1.active_name_color || ''}">${p1.nome}</span>
+                        <span data-color="${p1.active_name_color || ''}" data-style="${p1.active_name_style || ''}">${p1.nome}</span>
                     </span>
                     ${p1.active_title ? `<div class="player-title text-white/80 mt-1" data-color="${p1.active_name_color || ''}">${p1.active_title}</div>` : ''}
                 </div>`;
@@ -589,7 +885,7 @@ $conn = $db->getConnection();
                         </div>
                     </div>
                     <span class="font-black text-xl md:text-2xl text-white uppercase italic tracking-tighter">
-                        <span data-color="${p2.active_name_color || ''}">${p2.nome}</span>
+                        <span data-color="${p2.active_name_color || ''}" data-style="${p2.active_name_style || ''}">${p2.nome}</span>
                     </span>
                     ${p2.active_title ? `<div class="player-title text-white/80 mt-1" data-color="${p2.active_name_color || ''}">${p2.active_title}</div>` : ''}
                 </div>`;
@@ -657,5 +953,6 @@ $conn = $db->getConnection();
         setInterval(fetchLiveStatus, 1000);
         fetchLiveStatus();
     </script>
+    <script src="aura-engine.js?v=<?php echo time(); ?>"></script>
 </body>
 </html>
