@@ -688,119 +688,237 @@ body {
 
 /* --- Aesthetic Customizations --- */
 
-/* Aura Classes (div-based overlay system) */
+/* ═══════════════════════════════════════════════════════════════
+   AURA SYSTEM — Realistic Animated Overlays (v3)
+   Each aura = div (absolute behind avatar) + ::before + ::after.
+   Techniques: conic-gradient, clip-path, organic border-radius.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── FLARE (Solar Corona — Spinning Light Rays) ─────────────── */
 .aura-flare {
-    background: radial-gradient(circle,
-            rgba(251, 191, 36, 0.8) 0%,
-            rgba(251, 191, 36, 0.5) 30%,
-            rgba(251, 191, 36, 0.2) 60%,
-            rgba(251, 191, 36, 0) 80%) !important;
-    filter: blur(8px) !important;
-    animation: aura-flare-pulse 2.5s ease-in-out infinite alternate !important;
+    background: conic-gradient(
+        from 0deg,
+        rgba(255, 210, 60, 0.95) 0deg, rgba(251, 191, 36, 0.1) 18deg,
+        rgba(255, 220, 80, 0.9)  36deg, rgba(251, 191, 36, 0.08) 54deg,
+        rgba(255, 200, 50, 0.92) 72deg, rgba(251, 191, 36, 0.1) 90deg,
+        rgba(255, 215, 70, 0.85) 108deg, rgba(251, 191, 36, 0.06) 126deg,
+        rgba(255, 210, 60, 0.9)  144deg, rgba(251, 191, 36, 0.1) 162deg,
+        rgba(255, 220, 80, 0.88) 180deg, rgba(251, 191, 36, 0.08) 198deg,
+        rgba(255, 200, 50, 0.92) 216deg, rgba(251, 191, 36, 0.1) 234deg,
+        rgba(255, 215, 70, 0.85) 252deg, rgba(251, 191, 36, 0.06) 270deg,
+        rgba(255, 210, 60, 0.9)  288deg, rgba(251, 191, 36, 0.1) 306deg,
+        rgba(255, 220, 80, 0.88) 324deg, rgba(251, 191, 36, 0.08) 342deg,
+        rgba(255, 210, 60, 0.95) 360deg
+    ) !important;
+    filter: blur(3px) !important;
+    animation: flare-spin 12s linear infinite !important;
     border-radius: 50% !important;
-    mix-blend-mode: screen !important;
-    box-shadow: 0 0 20px rgba(251, 191, 36, 0.3) !important;
+    mix-blend-mode: normal !important;
+    overflow: visible !important;
 }
 
-@keyframes aura-flare-pulse {
-    0% {
-        transform: scale(0.85);
-        opacity: 0.4;
-        filter: blur(6px);
-    }
-
-    100% {
-        transform: scale(1.2);
-        opacity: 0.9;
-        filter: blur(10px);
-    }
+.aura-flare::before {
+    content: '' !important;
+    position: absolute !important;
+    inset: 12% !important;
+    border-radius: 50% !important;
+    background: radial-gradient(circle,
+        rgba(255, 245, 170, 0.95) 0%,
+        rgba(251, 191, 36, 0.6) 40%,
+        rgba(245, 158, 11, 0.2) 70%,
+        transparent 100%) !important;
+    filter: blur(2px) !important;
+    animation: flare-core-pulse 4s ease-in-out infinite alternate !important;
 }
 
+.aura-flare::after {
+    content: '' !important;
+    position: absolute !important;
+    inset: -4px !important;
+    border-radius: 50% !important;
+    background: transparent !important;
+    box-shadow:
+        0 0 15px 6px rgba(251, 191, 36, 0.4),
+        0 0 35px 12px rgba(251, 191, 36, 0.2),
+        0 0 55px 20px rgba(251, 191, 36, 0.05) !important;
+    animation: flare-halo-pulse 5s ease-in-out infinite alternate !important;
+}
+
+@keyframes flare-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+@keyframes flare-core-pulse {
+    0%   { opacity: 0.6; transform: scale(0.93); }
+    100% { opacity: 1;   transform: scale(1.06); }
+}
+@keyframes flare-halo-pulse {
+    0%   { opacity: 0.35; transform: scale(0.97); }
+    100% { opacity: 0.75; transform: scale(1.04); }
+}
+
+
+/* ── FIRE (Inferno — Organic Flame Tongues + Sparks) ────────── */
 .aura-fire {
-    background: radial-gradient(circle,
-            rgba(255, 77, 0, 0.9) 0%,
-            rgba(255, 0, 0, 0.6) 25%,
-            rgba(255, 140, 0, 0.4) 50%,
-            rgba(255, 77, 0, 0.1) 75%,
-            rgba(255, 77, 0, 0) 90%) !important;
-    filter: blur(6px) !important;
-    animation: aura-fire-pulse 1.8s ease-in-out infinite alternate !important;
-    border-radius: 50% !important;
-    mix-blend-mode: screen !important;
-    box-shadow: 0 0 25px rgba(255, 77, 0, 0.4) !important;
+    background: radial-gradient(ellipse 100% 140% at 50% 70%,
+        rgba(255, 255, 80, 0.95) 0%,
+        rgba(255, 180, 0, 0.85) 15%,
+        rgba(255, 80, 0, 0.7)  35%,
+        rgba(200, 20, 0, 0.45) 55%,
+        rgba(100, 0, 0, 0.15)  75%,
+        transparent 90%) !important;
+    filter: brightness(1.2) !important;
+    animation: fire-morph 3s ease-in-out infinite alternate !important;
+    border-radius: 42% 58% 45% 55% / 38% 42% 58% 62% !important;
+    mix-blend-mode: normal !important;
+    overflow: visible !important;
+    box-shadow:
+        0 -6px 12px rgba(255, 180, 0, 0.5),
+        0 0 20px 6px rgba(255, 80, 0, 0.4),
+        0 0 40px 12px rgba(200, 0, 0, 0.2) !important;
 }
 
-@keyframes aura-fire-pulse {
-    0% {
-        transform: scale(0.8);
-        opacity: 0.5;
-        filter: blur(5px) brightness(1);
-    }
-
-    50% {
-        transform: scale(1.15);
-        opacity: 1;
-        filter: blur(8px) brightness(1.4);
-    }
-
-    100% {
-        transform: scale(0.95);
-        opacity: 0.7;
-        filter: blur(4px) brightness(1.2);
-    }
+.aura-fire::before {
+    content: '' !important;
+    position: absolute !important;
+    inset: 5% 10% 15% 8% !important;
+    border-radius: 55% 45% 50% 50% / 40% 50% 50% 60% !important;
+    background: radial-gradient(ellipse 120% 150% at 45% 65%,
+        rgba(255, 255, 120, 0.9) 0%,
+        rgba(255, 140, 0, 0.7) 25%,
+        rgba(255, 60, 0, 0.4) 50%,
+        transparent 75%) !important;
+    filter: blur(1px) !important;
+    animation: fire-morph-alt 2s ease-in-out infinite alternate 0.4s !important;
 }
 
+/* Sparks are now handled by canvas particle engine in JS for better performance and realism */
+.aura-fire::after {
+    display: none !important;
+}
+
+@keyframes fire-morph {
+    0%   { border-radius: 42% 58% 45% 55% / 38% 42% 58% 62%; transform: scaleX(0.96) scaleY(0.92); }
+    33%  { border-radius: 55% 45% 52% 48% / 50% 38% 62% 50%; transform: scaleX(1.04) scaleY(1.08); }
+    66%  { border-radius: 48% 52% 40% 60% / 44% 55% 45% 56%; transform: scaleX(0.98) scaleY(1.02); }
+    100% { border-radius: 52% 48% 58% 42% / 55% 45% 55% 45%; transform: scaleX(1.02) scaleY(0.94); }
+}
+
+@keyframes fire-morph-alt {
+    0%   { border-radius: 55% 45% 50% 50% / 40% 50% 50% 60%; transform: scaleX(0.92) scaleY(0.88); opacity: 0.7; }
+    50%  { border-radius: 45% 55% 55% 45% / 48% 42% 58% 52%; transform: scaleX(1.06) scaleY(1.08); opacity: 0.95; }
+    100% { border-radius: 50% 50% 42% 58% / 55% 45% 55% 45%; transform: scaleX(0.97) scaleY(1.02); opacity: 0.8; }
+}
+
+
+/* ── VOID (Dark Singularity — Spinning Vortex) ──────────────── */
 .aura-void {
-    background: radial-gradient(circle,
-            rgba(88, 28, 135, 0.9) 0%,
-            rgba(30, 0, 60, 0.7) 40%,
-            rgba(0, 0, 0, 0.5) 70%,
-            rgba(0, 0, 0, 0) 90%) !important;
-    filter: blur(10px) brightness(0.8) !important;
-    animation: aura-void-pulse 4s ease-in-out infinite alternate !important;
+    background: conic-gradient(
+        from 0deg,
+        rgba(88, 28, 135, 0.9)  0deg,   rgba(30, 0, 60, 0.4) 25deg,
+        rgba(139, 92, 246, 0.8) 50deg,   rgba(30, 0, 60, 0.4) 75deg,
+        rgba(88, 28, 135, 0.9)  100deg,  rgba(30, 0, 60, 0.4) 125deg,
+        rgba(168, 85, 247, 0.7) 150deg,  rgba(30, 0, 60, 0.4) 175deg,
+        rgba(88, 28, 135, 0.9) 200deg,  rgba(30, 0, 60, 0.4) 225deg,
+        rgba(139, 92, 246, 0.8) 250deg,  rgba(30, 0, 60, 0.4) 275deg,
+        rgba(88, 28, 135, 0.9)  300deg,  rgba(30, 0, 60, 0.4) 325deg,
+        rgba(168, 85, 247, 0.7) 350deg, rgba(88, 28, 135, 0.9) 360deg
+    ) !important;
+    filter: blur(2px) !important;
+    animation: void-rotate 12s linear infinite reverse !important;
     border-radius: 50% !important;
-    mix-blend-mode: soft-light !important;
-    box-shadow: 0 0 30px rgba(88, 28, 135, 0.4) !important;
+    mix-blend-mode: normal !important;
+    overflow: visible !important;
+    box-shadow:
+        0 0 30px 10px rgba(88, 28, 135, 0.5),
+        0 0 60px 20px rgba(30, 0, 60, 0.3) !important;
 }
 
-@keyframes aura-void-pulse {
+.aura-void::before {
+    content: '' !important;
+    position: absolute !important;
+    inset: 15% !important;
+    border-radius: 50% !important;
+    background: radial-gradient(circle,
+        rgba(0, 0, 0, 0.98) 0%,
+        rgba(15, 0, 30, 0.9) 35%,
+        rgba(40, 0, 70, 0.6) 65%,
+        transparent 100%) !important;
+    box-shadow: inset 0 0 25px rgba(0, 0, 0, 0.95) !important;
+    animation: void-core-pulse 4s ease-in-out infinite alternate !important;
+}
+
+.aura-void::after {
+    content: '' !important;
+    position: absolute !important;
+    inset: -8px !important;
+    border-radius: 50% !important;
+    background: transparent !important;
+    box-shadow:
+        inset 0 0 15px 5px rgba(139, 92, 246, 0.45),
+        0 0 20px 8px rgba(88, 28, 135, 0.5),
+        0 0 45px 15px rgba(30, 0, 60, 0.3) !important;
+    animation: void-horizon-pulse 6s ease-in-out infinite alternate !important;
+}
+
+@keyframes void-rotate {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+@keyframes void-core-pulse {
+    0%   { transform: scale(0.92); opacity: 0.8; box-shadow: inset 0 0 20px rgba(0,0,0,0.9); }
+    100% { transform: scale(1.08); opacity: 1;   box-shadow: inset 0 0 30px rgba(0,0,0,0.98); }
+}
+@keyframes void-horizon-pulse {
     0% {
-        transform: scale(0.9);
-        opacity: 0.4;
-        filter: blur(12px) contrast(1.2);
+        box-shadow:
+            inset 0 0 12px 4px rgba(139, 92, 246, 0.35),
+            0 0 18px 6px rgba(88, 28, 135, 0.4),
+            0 0 35px 12px rgba(30, 0, 60, 0.25);
     }
-
     100% {
-        transform: scale(1.1);
-        opacity: 0.8;
-        filter: blur(8px) contrast(1.5);
+        box-shadow:
+            inset 0 0 18px 7px rgba(168, 85, 247, 0.55),
+            0 0 28px 12px rgba(139, 92, 246, 0.55),
+            0 0 55px 22px rgba(88, 28, 135, 0.35);
     }
 }
 
+
+/* ── STORM (Lightning — Thunder Flash) ──────── */
 .aura-storm {
     background: radial-gradient(circle,
-            rgba(34, 211, 238, 0.8) 0%,
-            rgba(14, 165, 233, 0.5) 35%,
-            rgba(37, 99, 235, 0.3) 60%,
-            rgba(37, 99, 235, 0) 85%) !important;
-    filter: blur(7px) !important;
-    animation: aura-storm-flicker 0.2s linear infinite alternate !important;
+        rgba(200, 240, 255, 0.8) 0%,
+        rgba(34, 211, 238, 0.7) 25%,
+        rgba(14, 165, 233, 0.5) 50%,
+        rgba(37, 99, 235, 0.25) 75%,
+        transparent 95%) !important;
+    filter: blur(1px) brightness(1.2) !important;
+    animation: storm-pulsate 1.5s ease-in-out infinite alternate !important;
     border-radius: 50% !important;
-    mix-blend-mode: screen !important;
-    box-shadow: 0 0 20px rgba(34, 211, 238, 0.5) !important;
+    mix-blend-mode: normal !important;
+    overflow: visible !important;
+    box-shadow:
+        0 0 12px 4px rgba(34, 211, 238, 0.6),
+        0 0 30px 10px rgba(14, 165, 233, 0.4) !important;
 }
 
-@keyframes aura-storm-flicker {
-    0% {
-        opacity: 0.5;
-        transform: scale(0.98);
-        filter: brightness(1);
-    }
+/* Storm Arcs are completely handled through the canvas JS particle system for ultimate fidelity */
+.aura-storm::before,
+.aura-storm::after {
+    display: none !important;
+}
 
+@keyframes storm-pulsate {
+    0% {
+        box-shadow: 0 0 10px 3px rgba(34, 211, 238, 0.5), 0 0 25px 8px rgba(14, 165, 233, 0.3);
+        transform: scale(0.98);
+        opacity: 0.8;
+    }
     100% {
-        opacity: 0.9;
-        transform: scale(1.02);
-        filter: brightness(1.8);
+        box-shadow: 0 0 20px 8px rgba(165, 243, 252, 0.8), 0 0 45px 15px rgba(34, 211, 238, 0.5), 0 0 70px 25px rgba(14, 165, 233, 0.3);
+        transform: scale(1.04);
+        opacity: 1;
     }
 }
 
@@ -830,20 +948,21 @@ body {
     -webkit-text-fill-color: transparent !important;
     font-weight: 800 !important;
     animation: gold-shine 2s linear infinite, gold-pulse 1s ease-in-out infinite alternate !important;
-    filter: drop-shadow(0 0 2px rgba(191, 149, 63, 0.4)) !important;
+    text-shadow: 0 0 2px rgba(191, 149, 63, 0.4) !important;
 }
 
 @keyframes gold-shine {
+    from { background-position: 0% center; }
     to { background-position: 200% center; }
 }
 
 @keyframes gold-pulse {
     from { 
-        filter: brightness(1) drop-shadow(0 0 1px rgba(191, 149, 63, 0.4)); 
+        text-shadow: 0 0 1px rgba(191, 149, 63, 0.4); 
         transform: scale(1);
     }
     to { 
-        filter: brightness(1.4) drop-shadow(0 0 5px rgba(251, 245, 183, 0.8)); 
+        text-shadow: 0 0 5px rgba(251, 245, 183, 0.8); 
         transform: scale(1.02);
     }
 }
@@ -892,14 +1011,13 @@ body {
     background-clip: text !important;
     -webkit-text-fill-color: transparent !important;
     font-weight: 800 !important;
-    filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.1)) !important;
+    text-shadow: 0 0 1px rgba(0, 0, 0, 0.1) !important;
     animation: rainbow-shimmer 2.5s linear infinite !important;
 }
 
 @keyframes rainbow-shimmer {
-    to {
-        background-position: 200% center;
-    }
+    from { background-position: 0% center; }
+    to { background-position: 200% center; }
 }
 
 [data-color="lime"] {
@@ -958,24 +1076,23 @@ body {
     -webkit-text-fill-color: transparent !important;
     font-weight: 800 !important;
     animation: emerald-shimmer 3s linear infinite, emerald-float 3s ease-in-out infinite alternate !important;
-    filter: drop-shadow(0 0 2px rgba(5, 150, 105, 0.4)) !important;
+    text-shadow: 0 0 2px rgba(5, 150, 105, 0.4) !important;
 }
 
 @keyframes emerald-float {
     from { 
         transform: translateY(0) scale(1); 
-        filter: drop-shadow(0 0 2px rgba(5, 150, 105, 0.4)); 
+        text-shadow: 0 0 2px rgba(5, 150, 105, 0.4); 
     }
     to { 
         transform: translateY(-2px) scale(1.05); 
-        filter: drop-shadow(0 0 8px rgba(52, 211, 153, 0.8)) brightness(1.3); 
+        text-shadow: 0 0 8px rgba(52, 211, 153, 0.8); 
     }
 }
 
 @keyframes emerald-shimmer {
-    to {
-        background-position: 200% center;
-    }
+    from { background-position: 0% center; }
+    to { background-position: 200% center; }
 }
 
 [data-style="pixel"] {
