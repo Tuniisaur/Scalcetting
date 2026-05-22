@@ -706,7 +706,6 @@ $currentUserIsAdmin = isAdmin($conn);
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Shojumaru&family=Ruslan+Display&family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.v6.css?v=<?php echo time(); ?>">
 <link rel="icon" type="image/x-icon" href="favicon.ico">
 <script>
         tailwind.config = {
