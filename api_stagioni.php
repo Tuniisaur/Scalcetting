@@ -61,6 +61,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                             CASE WHEN partite_portiere > 0 THEN elo_portiere ELSE NULL END as display_elo_portiere,
                             CASE WHEN partite_attaccante > 0 THEN elo_attaccante ELSE NULL END as display_elo_attaccante,
                             CASE 
+                                WHEN partite_portiere > partite_attaccante THEN elo_portiere
+                                WHEN partite_attaccante > partite_portiere THEN elo_attaccante
                                 WHEN partite_portiere > 0 AND partite_attaccante > 0 THEN GREATEST(elo_portiere, elo_attaccante)
                                 WHEN partite_portiere > 0 THEN elo_portiere
                                 WHEN partite_attaccante > 0 THEN elo_attaccante
@@ -73,6 +75,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                         WHERE id != 9999
                         ORDER BY 
                             CASE 
+                                WHEN partite_portiere > partite_attaccante THEN elo_portiere
+                                WHEN partite_attaccante > partite_portiere THEN elo_attaccante
                                 WHEN partite_portiere > 0 AND partite_attaccante > 0 THEN GREATEST(elo_portiere, elo_attaccante)
                                 WHEN partite_portiere > 0 THEN elo_portiere
                                 WHEN partite_attaccante > 0 THEN elo_attaccante
@@ -86,6 +90,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                             CASE WHEN s.partite_portiere > 0 THEN s.elo_portiere ELSE NULL END as display_elo_portiere,
                             CASE WHEN s.partite_attaccante > 0 THEN s.elo_attaccante ELSE NULL END as display_elo_attaccante,
                             CASE 
+                                WHEN s.partite_portiere > s.partite_attaccante THEN s.elo_portiere
+                                WHEN s.partite_attaccante > s.partite_portiere THEN s.elo_attaccante
                                 WHEN s.partite_portiere > 0 AND s.partite_attaccante > 0 THEN GREATEST(s.elo_portiere, s.elo_attaccante)
                                 WHEN s.partite_portiere > 0 THEN s.elo_portiere
                                 WHEN s.partite_attaccante > 0 THEN s.elo_attaccante
@@ -99,6 +105,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                         WHERE s.stagione_id = ? AND g.id != 9999
                         ORDER BY 
                             CASE 
+                                WHEN s.partite_portiere > s.partite_attaccante THEN s.elo_portiere
+                                WHEN s.partite_attaccante > s.partite_portiere THEN s.elo_attaccante
                                 WHEN s.partite_portiere > 0 AND s.partite_attaccante > 0 THEN GREATEST(s.elo_portiere, s.elo_attaccante)
                                 WHEN s.partite_portiere > 0 THEN s.elo_portiere
                                 WHEN s.partite_attaccante > 0 THEN s.elo_attaccante
@@ -152,7 +160,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             foreach ($history as &$seasonStat) {
                 // Calculate Elo Medio for the player in that season
                 $playerEloMedio = 1500;
-                if ($seasonStat['partite_portiere'] > 0 && $seasonStat['partite_attaccante'] > 0) {
+                if ($seasonStat['partite_portiere'] > $seasonStat['partite_attaccante']) {
+                    $playerEloMedio = $seasonStat['elo_portiere'];
+                } elseif ($seasonStat['partite_attaccante'] > $seasonStat['partite_portiere']) {
+                    $playerEloMedio = $seasonStat['elo_attaccante'];
+                } elseif ($seasonStat['partite_portiere'] > 0 && $seasonStat['partite_attaccante'] > 0) {
                     $playerEloMedio = max($seasonStat['elo_portiere'], $seasonStat['elo_attaccante']);
                 } elseif ($seasonStat['partite_portiere'] > 0) {
                     $playerEloMedio = $seasonStat['elo_portiere'];
@@ -163,6 +175,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 // Check if anyone in that season had a higher Elo Medio
                 $sqlWinner = "SELECT MAX(
                                 CASE 
+                                    WHEN partite_portiere > partite_attaccante THEN elo_portiere
+                                    WHEN partite_attaccante > partite_portiere THEN elo_attaccante
                                     WHEN partite_portiere > 0 AND partite_attaccante > 0 THEN GREATEST(elo_portiere, elo_attaccante)
                                     WHEN partite_portiere > 0 THEN elo_portiere
                                     WHEN partite_attaccante > 0 THEN elo_attaccante
@@ -183,6 +197,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 $sqlRank = "SELECT COUNT(*) + 1 FROM statistiche_stagioni 
                             WHERE stagione_id = ? AND (
                                 CASE 
+                                    WHEN partite_portiere > partite_attaccante THEN elo_portiere
+                                    WHEN partite_attaccante > partite_portiere THEN elo_attaccante
                                     WHEN partite_portiere > 0 AND partite_attaccante > 0 THEN GREATEST(elo_portiere, elo_attaccante)
                                     WHEN partite_portiere > 0 THEN elo_portiere
                                     WHEN partite_attaccante > 0 THEN elo_attaccante
