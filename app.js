@@ -298,23 +298,6 @@ async function loadData() {
     }
 }
 
-function getPlayerGeneralElo(player) {
-    if (!player) return 1500;
-    if (player.elo_medio !== undefined && player.elo_medio !== null) {
-        return player.elo_medio;
-    }
-    const pp = player.partite_portiere || 0;
-    const pa = player.partite_attaccante || 0;
-    const ep = player.elo_portiere !== undefined ? player.elo_portiere : 1500;
-    const ea = player.elo_attaccante !== undefined ? player.elo_attaccante : 1500;
-    if (pp > pa) return ep;
-    if (pa > pp) return ea;
-    if (pp > 0 && pa > 0) return Math.max(ep, ea);
-    if (pp > 0) return ep;
-    if (pa > 0) return ea;
-    return 1500;
-}
-
 // --- RENDERING ---
 
 function renderDashboard() {
@@ -334,17 +317,19 @@ function renderDashboard() {
     }
     if (!displayPlayer) {
         displayPlayer = [...giocatori].sort((a, b) => {
-            return getPlayerGeneralElo(b) - getPlayerGeneralElo(a);
+            const maxA = Math.max(a.elo_attaccante, a.elo_portiere);
+            const maxB = Math.max(b.elo_attaccante, b.elo_portiere);
+            return maxB - maxA;
         })[0];
     }
 
     if (displayPlayer) {
-        const bestElo = getPlayerGeneralElo(displayPlayer);
+        const bestElo = Math.max(displayPlayer.elo_attaccante, displayPlayer.elo_portiere);
         const winRate = Math.round((displayPlayer.vittorie_totali / displayPlayer.partite_totali) * 100) || 0;
 
         // Calculate Rank
         const sorted = [...giocatori].sort((a, b) => {
-            return getPlayerGeneralElo(b) - getPlayerGeneralElo(a);
+            return Math.max(b.elo_attaccante, b.elo_portiere) - Math.max(a.elo_attaccante, a.elo_portiere);
         });
         const rank = sorted.findIndex(p => p.id === displayPlayer.id) + 1;
 
@@ -520,7 +505,9 @@ function renderLeaderboard(players = giocatori) {
             // All players, sorted by overall ELO (elo_medio)
             filtered = players;
             sorted = [...filtered].sort((a, b) => {
-                return getPlayerGeneralElo(b) - getPlayerGeneralElo(a);
+                const eloA = a.elo_medio || Math.max(a.elo_attaccante || 0, a.elo_portiere || 0);
+                const eloB = b.elo_medio || Math.max(b.elo_attaccante || 0, b.elo_portiere || 0);
+                return eloB - eloA;
             });
             break;
     }
@@ -2508,7 +2495,7 @@ function createPodiumItem(player, rank, tab = 'generale') {
             break;
         case 'generale':
         default:
-            displayElo = getPlayerGeneralElo(player);
+            displayElo = player.elo_medio || Math.round(((player.elo_attaccante || 1500) + (player.elo_portiere || 1500)) / 2);
             break;
     }
 
@@ -2566,7 +2553,7 @@ function createLeaderboardItem(player, rank, tab = 'generale') {
             break;
         case 'generale':
         default:
-            displayElo = getPlayerGeneralElo(player);
+            displayElo = player.elo_medio || Math.round(((player.elo_attaccante || 1500) + (player.elo_portiere || 1500)) / 2);
             displayWins = player.vittorie_totali || 0;
             break;
     }
@@ -2614,8 +2601,11 @@ function getBountyInfo() {
     const activePlayers = giocatori.filter(p => p.partite_totali > 0);
     if (activePlayers.length === 0) return { leaderId: null, bestRole: null };
 
+    // Find the #1 General Leader (Sort by overall ELO average)
     const sorted = [...activePlayers].sort((a, b) => {
-        return getPlayerGeneralElo(b) - getPlayerGeneralElo(a);
+        const eloA = a.elo_medio || Math.max(a.elo_attaccante || 0, a.elo_portiere || 0);
+        const eloB = b.elo_medio || Math.max(b.elo_attaccante || 0, b.elo_portiere || 0);
+        return eloB - eloA;
     });
 
     const leader = sorted[0];
@@ -3628,14 +3618,7 @@ function calculatePlayerStatsForSeason(playerId, seasonId) {
         avatar_url: player.avatar_url,
         elo_attaccante: currAtk,
         elo_portiere: currDef,
-        elo_medio: (() => {
-            if (matchesDef > matchesAtk) return currDef;
-            if (matchesAtk > matchesDef) return currAtk;
-            if (matchesDef > 0 && matchesAtk > 0) return Math.max(currAtk, currDef);
-            if (matchesDef > 0) return currDef;
-            if (matchesAtk > 0) return currAtk;
-            return 1500;
-        })(),
+        elo_medio: Math.round((currAtk + currDef) / 2),
         vittorie_totali: winsTot,
         partite_totali: matchesTot,
         vittorie_attaccante: winsAtk,
