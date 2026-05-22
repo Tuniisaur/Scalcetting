@@ -130,7 +130,8 @@ body {
 
 /* Mobile Bottom Nav */
 .mobile-nav {
-    /* Hidden by default; shown on mobile via media query */
+    display: none;
+    /* Hidden on desktop */
     position: fixed;
     bottom: 0;
     left: 0;
@@ -138,11 +139,11 @@ body {
     height: var(--nav-height-mobile);
     background-color: var(--bg-card);
     border-top: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
     justify-content: space-around;
     align-items: center;
     z-index: 50;
     padding-bottom: env(safe-area-inset-bottom);
-    display: none;
 }
 
 .mobile-nav-item {
@@ -345,7 +346,10 @@ body {
 }
 
 .match-card {
+    background-color: var(--text-main);
+    /* Fallback? No, logic error. Should be bg-card */
     background-color: var(--bg-card);
+    /* Fixed */
     padding: var(--spacing-md);
     border-radius: var(--radius-md);
     margin-bottom: var(--spacing-sm);
@@ -580,11 +584,11 @@ body {
 .heatmap-section {
     margin-top: 1.5rem;
     padding-top: 1.5rem;
-    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .dark .heatmap-section {
-    border-top-color: rgba(255, 255, 255, 0.08);
+    border-top-color: rgba(255, 255, 255, 0.05);
 }
 
 .heatmap-container {
@@ -609,22 +613,21 @@ body {
     height: 10px;
     border-radius: 2px;
     background-color: #ebedf0;
-    transition: transform 0.2s, opacity 0.2s;
+    transition: transform 0.2s;
 }
 
 .dark .heatmap-cell {
-    background-color: #1e2a3a;
+    background-color: #161b22;
 }
 
 .heatmap-cell:hover {
     transform: scale(1.3);
     z-index: 10;
-    opacity: 0.85;
 }
 
 /* Activity Levels */
 .hv-0 {
-    background-color: #e8edf2;
+    background-color: #ebedf0;
 }
 
 .hv-1 {
@@ -644,7 +647,7 @@ body {
 }
 
 .dark .hv-0 {
-    background-color: #1e2a3a;
+    background-color: #161b22;
 }
 
 .dark .hv-1 {
@@ -674,7 +677,7 @@ body {
 }
 
 .dark .heatmap-legend {
-    color: #94a3b8;
+    color: #8b949e;
 }
 
 .heatmap-legend-box {
@@ -1145,17 +1148,10 @@ body {
     -webkit-background-clip: initial !important;
     background-clip: initial !important;
     -webkit-text-fill-color: initial !important;
-    color: currentColor !important;
+    color: #000 !important;
     text-shadow: 0.05em 0 0 #00fffc, -0.03em -0.04em 0 #fc00ff,
         0.025em 0.04em 0 #fffc00 !important;
     animation: glitch 725ms infinite, glitch-wobble 2s infinite !important;
-}
-
-/* Glitch on dark backgrounds - use lighter base color */
-.dark [data-style="glitch"],
-[class*="bg-gray-8"] [data-style="glitch"],
-[class*="bg-gray-9"] [data-style="glitch"] {
-    color: #f8fafc !important;
 }
 
 @keyframes glitch-wobble {
@@ -1238,8 +1234,7 @@ body {
 }
 
 .dark .podium-title-badge {
-    border-color: #0f172a;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+    border-color: #1f2937;
 }
 
 /* Reset background-clip ONLY on podium badges (which display as colored boxes, not clipped text) */
@@ -1343,7 +1338,7 @@ body {
 
 .shop-card {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    background: #ffffff;
+    background: white;
     border: 1px solid #e2e8f0;
     /* slate-200 */
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -1355,8 +1350,9 @@ body {
 
 .dark .shop-card {
     background: #1e293b;
-    border: 1px solid rgba(255, 255, 255, 0.07);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.25);
+    /* mixed with gray-800 */
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
 }
 
 .shop-card:hover {
@@ -1366,9 +1362,8 @@ body {
 }
 
 .dark .shop-card:hover {
-    border-color: rgba(255, 255, 255, 0.12);
-    background: #263348;
-    box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.35);
+    border-color: rgba(255, 255, 255, 0.1);
+    background: #25334a;
 }
 
 .shop-card.bonus:hover {
@@ -1376,19 +1371,9 @@ body {
     box-shadow: 0 10px 30px -10px rgba(245, 158, 11, 0.2);
 }
 
-.dark .shop-card.bonus:hover {
-    border-color: rgba(245, 158, 11, 0.4);
-    box-shadow: 0 10px 30px -10px rgba(245, 158, 11, 0.15);
-}
-
 .shop-card.aesthetic:hover {
     border-color: rgba(99, 102, 241, 0.5);
     box-shadow: 0 10px 30px -10px rgba(99, 102, 241, 0.2);
-}
-
-.dark .shop-card.aesthetic:hover {
-    border-color: rgba(99, 102, 241, 0.4);
-    box-shadow: 0 10px 30px -10px rgba(99, 102, 241, 0.15);
 }
 
 .shop-item-price {
@@ -1401,7 +1386,6 @@ body {
     background: linear-gradient(135deg, #451a03, #78350f);
     color: #fef3c7;
     border: 1px solid rgba(251, 191, 36, 0.2);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 @keyframes shop-item-appear {
@@ -2184,274 +2168,4 @@ button[id^="btn-"].locked::after {
     .betting-mkt-header { padding: 16px 20px 12px; }
     .betting-line-sep { padding: 12px 20px 4px; }
     .bet-card, .bet-card-mini, .bet-card-compact { min-height: 62px; }
-}
-
-/* ═══════════════════════════════════════════════
-   SUPPLEMENTARY AESTHETIC FIXES
-   ═══════════════════════════════════════════════ */
-
-/* --- Aura visibility in Light mode contexts (scoreboard, modals) --- */
-/* In light backgrounds, screen blend mode on auras can make them invisible.
-   Use a subtle fallback for aura containers in non-dark contexts. */
-.light .aura-flare,
-html:not(.dark) .aura-flare {
-    mix-blend-mode: multiply !important;
-    opacity: 0.75 !important;
-}
-.light .aura-fire,
-html:not(.dark) .aura-fire {
-    mix-blend-mode: multiply !important;
-    opacity: 0.80 !important;
-}
-.light .aura-storm,
-html:not(.dark) .aura-storm {
-    mix-blend-mode: multiply !important;
-    opacity: 0.75 !important;
-}
-/* Void is dark, keep screen blend in dark, multiply in light */
-.light .aura-void,
-html:not(.dark) .aura-void {
-    mix-blend-mode: multiply !important;
-    opacity: 0.55 !important;
-}
-
-/* --- Aura in dark contexts (index.php sidebar, player cards) --- */
-.dark .aura-flare,
-.dark .aura-fire,
-.dark .aura-storm {
-    mix-blend-mode: screen !important;
-}
-.dark .aura-void {
-    mix-blend-mode: normal !important;
-}
-
-/* --- Leaderboard rows dark mode border improvement --- */
-.dark .leaderboard-row {
-    border: 1px solid rgba(255, 255, 255, 0.04);
-}
-
-/* --- Player title dark mode fix --- */
-.dark .player-title {
-    color: #60a5fa;
-    opacity: 0.9;
-}
-
-/* --- Match card history dark mode readability --- */
-.match-card-history {
-    transition: background-color 0.2s;
-}
-.dark .match-card-history:hover {
-    background-color: rgba(255, 255, 255, 0.04);
-}
-
-/* --- Bottom mobile nav safe area padding fix --- */
-@media (max-width: 768px) {
-    .mobile-nav {
-        padding-bottom: max(env(safe-area-inset-bottom), 8px);
-    }
-}
-
-/* --- Plasma color visibility fix on white/light backgrounds --- */
-.light [data-color="plasma"],
-html:not(.dark) .bg-white [data-color="plasma"] {
-    color: #0e7490 !important;
-    text-shadow:
-        0 0 4px rgba(14, 116, 144, 0.3),
-        0 0 8px rgba(34, 211, 238, 0.4) !important;
-    animation: plasma-pulse-light 1.5s ease-in-out infinite alternate !important;
-}
-@keyframes plasma-pulse-light {
-    from { filter: brightness(1) drop-shadow(0 0 2px #0e7490); }
-    to   { filter: brightness(1.2) drop-shadow(0 0 6px #22d3ee); }
-}
-
-/* --- Neon color on light mode scoreboard --- */
-.light [data-color="neon"],
-html:not(.dark) [data-color="neon"] {
-    color: #9d174d !important;
-    text-shadow:
-        0 0 5px #f0abfc,
-        0 0 10px #e879f9,
-        0 0 20px #e879f9 !important;
-}
-
-/* --- Russian style in dark mode needs white text for readability --- */
-.dark [data-style="russian"],
-.dark [data-style="name_russian"] {
-    color: #93c5fd !important;
-    text-shadow: 1px 1px 0px rgba(0,0,0,0.5) !important;
-}
-
-/* --- Shop tab button active underline fix for dark mode --- */
-.dark .shop-tab-btn.active {
-    color: #fbbf24;
-    background: rgba(245, 158, 11, 0.08);
-}
-.dark .shop-tab-btn.active::after {
-    background: linear-gradient(90deg, #fbbf24, #f97316);
-}
-
-/* --- Betting page light theme bet-odd text contrast --- */
-.bet-odd {
-    color: #1d4ed8;
-}
-.bet-card:hover .bet-odd,
-.bet-card-mini:hover .bet-odd,
-.bet-card-compact:hover .bet-odd {
-    color: #1e40af;
-}
-
-/* --- Scrollbar in dark mode for betting area --- */
-.dark .betting-content-area::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.08);
-}
-
-/* --- Active bets banner in dark mode --- */
-.dark .active-bets-banner {
-    background: #1e293b;
-    border-color: rgba(255, 255, 255, 0.07);
-}
-.dark .active-bet-row {
-    background: #1e293b;
-    border-bottom-color: rgba(255, 255, 255, 0.04);
-}
-.dark .active-bet-row:hover {
-    background: #253347;
-}
-.dark .active-bet-market {
-    color: #f1f5f9;
-}
-.dark .active-bet-details {
-    color: #94a3b8;
-}
-
-/* --- Betting slip panel dark mode --- */
-.dark #slip-panel {
-    background: #1e293b;
-    box-shadow: 0 -4px 30px rgba(0,0,0,0.4);
-}
-.dark .slip-header h3 {
-    color: #f1f5f9;
-}
-.dark .slip-selection-card {
-    background: linear-gradient(135deg, #0f172a, #1e293b);
-    border-color: rgba(255,255,255,0.07);
-}
-.dark .slip-selection-card .slip-selection-name {
-    color: #f1f5f9;
-}
-.dark .slip-amount-input {
-    background: #0f172a;
-    border-color: rgba(255,255,255,0.1);
-    color: #f1f5f9;
-}
-.dark .slip-amount-input:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
-}
-.dark .slip-amount-btns button {
-    background: #1e293b;
-    border-color: rgba(255,255,255,0.1);
-    color: #cbd5e1;
-}
-.dark .slip-amount-btns button:hover {
-    background: #253347;
-}
-.dark .slip-win-card {
-    background: linear-gradient(135deg, rgba(30,58,138,0.3) 0%, rgba(30,27,75,0.3) 100%);
-    border-color: rgba(59,130,246,0.2);
-}
-.dark .slip-win-label {
-    color: #60a5fa;
-}
-.dark .slip-win-value {
-    color: #93c5fd;
-}
-.dark .slip-handle {
-    background: rgba(255,255,255,0.1);
-}
-
-/* --- Betting nav dark mode --- */
-.dark .betting-nav-container {
-    background: #1e293b;
-    border-bottom-color: rgba(255,255,255,0.06);
-}
-.dark .betting-nav-btn {
-    color: #94a3b8;
-}
-.dark .betting-nav-btn:hover {
-    color: #e2e8f0;
-    background: rgba(255,255,255,0.05);
-}
-.dark .betting-nav-btn.active {
-    color: #60a5fa;
-    background: rgba(59,130,246,0.1);
-}
-
-/* --- Betting topbar dark mode --- */
-.dark .betting-topbar {
-    background: #1e293b;
-    border-bottom-color: rgba(255,255,255,0.06);
-}
-.dark .betting-back-btn {
-    background: #253347;
-    border-color: rgba(255,255,255,0.08);
-    color: #94a3b8;
-}
-.dark .betting-back-btn:hover {
-    background: #2d3f57;
-    border-color: rgba(255,255,255,0.12);
-}
-
-/* --- Betting market group dark mode --- */
-.dark .betting-market-group {
-    background: #1e293b;
-    border-color: rgba(255,255,255,0.05);
-}
-.dark .betting-mkt-header {
-    background: linear-gradient(180deg, #253347 0%, #1e293b 100%);
-    border-bottom-color: rgba(255,255,255,0.04);
-}
-.dark .betting-mkt-header h3 {
-    color: #e2e8f0;
-}
-.dark .betting-col-hdr {
-    background: linear-gradient(180deg, #1a2840 0%, #1e293b 100%);
-    border-bottom-color: rgba(255,255,255,0.04);
-    color: #64748b;
-}
-.dark .betting-col-hdr.blue { color: #60a5fa; }
-.dark .betting-col-hdr.red  { color: #f87171; }
-.dark .betting-line-sep::after {
-    background: linear-gradient(90deg, rgba(255,255,255,0.08), transparent);
-}
-.dark .betting-line-sep span { color: #475569; }
-
-/* --- Bet cards dark mode --- */
-.dark .bet-card,
-.dark .bet-card-mini,
-.dark .bet-card-compact {
-    background: #1e293b;
-    border-right-color: rgba(255,255,255,0.04);
-    border-bottom-color: rgba(255,255,255,0.04);
-}
-.dark .bet-card:hover,
-.dark .bet-card-mini:hover,
-.dark .bet-card-compact:hover {
-    background: #253347;
-}
-.dark .bet-label {
-    color: #64748b;
-}
-.dark .bet-odd {
-    color: #60a5fa;
-}
-.dark .bet-card:hover .bet-odd,
-.dark .bet-card-mini:hover .bet-odd {
-    color: #93c5fd;
-}
-
-/* --- Betting content area dark mode --- */
-.dark .betting-content-area {
-    background: #0f172a;
 }
