@@ -86,18 +86,10 @@ class Database
  */
 function getBountyInfo($conn)
 {
-    // Il leader è calcolato in base alla classifica Generale (ruolo con più partite)
+    // Il leader è calcolato sulla media ELO degli attaccanti e portieri (classifica Generale)
     $stmt = $conn->prepare("SELECT id, elo_attaccante, elo_portiere FROM giocatori 
                           WHERE id != 9999 AND partite_totali > 0 
-                          ORDER BY 
-                              CASE 
-                                  WHEN partite_portiere > partite_attaccante THEN elo_portiere
-                                  WHEN partite_attaccante > partite_portiere THEN elo_attaccante
-                                  WHEN partite_portiere > 0 AND partite_attaccante > 0 THEN GREATEST(elo_portiere, elo_attaccante)
-                                  WHEN partite_portiere > 0 THEN elo_portiere
-                                  WHEN partite_attaccante > 0 THEN elo_attaccante
-                                  ELSE 1500 
-                              END DESC 
+                          ORDER BY (elo_attaccante + elo_portiere) / 2 DESC 
                           LIMIT 1");
     $stmt->execute();
     $leader = $stmt->fetch(PDO::FETCH_ASSOC);
