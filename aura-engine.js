@@ -423,6 +423,329 @@
         }
     }
 
+    /* ─── ICE AURA (Crystalline Orbiting Shards) ─────────────────────── */
+    class IceAura extends LocalAura {
+        tick(dt) {
+            if (this.width < 10 || this.height < 10) return;
+            const ctx = this.ctx;
+            ctx.clearRect(0, 0, this.width, this.height);
+            ctx.globalCompositeOperation = 'screen';
+
+            this.timer += dt;
+            const cx = this.width / 2;
+            const cy = this.height / 2;
+            const avatarRadius = (this.width - 40) / 2;
+
+            // Spawn ice crystals on the outer ring
+            if (this.particles.length < 40 && Math.random() < 0.5) {
+                const angle = Math.random() * Math.PI * 2;
+                const orbitR = avatarRadius + 8 + Math.random() * 12;
+                this.particles.push({
+                    angle,
+                    orbitR,
+                    orbitSpeed: (0.6 + Math.random() * 1.2) * (Math.random() < 0.5 ? 1 : -1),
+                    size: 1.5 + Math.random() * 3,
+                    life: 1.0,
+                    decay: 0.25 + Math.random() * 0.3,
+                    rotation: Math.random() * Math.PI * 2,
+                    rotSpeed: (Math.random() - 0.5) * 4,
+                    drift: (Math.random() - 0.5) * 6
+                });
+            }
+
+            // Icy inner glow ring
+            const ringGrad = ctx.createRadialGradient(cx, cy, avatarRadius * 0.9, cx, cy, avatarRadius * 1.25);
+            ringGrad.addColorStop(0, 'rgba(186, 230, 253, 0.0)');
+            ringGrad.addColorStop(0.4, 'rgba(125, 211, 252, 0.25)');
+            ringGrad.addColorStop(0.7, 'rgba(56, 189, 248, 0.12)');
+            ringGrad.addColorStop(1, 'rgba(56, 189, 248, 0)');
+            ctx.beginPath();
+            ctx.arc(cx, cy, avatarRadius * 1.25, 0, Math.PI * 2);
+            ctx.fillStyle = ringGrad;
+            ctx.fill();
+
+            for (let i = this.particles.length - 1; i >= 0; i--) {
+                const p = this.particles[i];
+                p.life -= p.decay * dt;
+                if (p.life <= 0) { this.particles.splice(i, 1); continue; }
+
+                p.angle += p.orbitSpeed * dt;
+                p.rotation += p.rotSpeed * dt;
+                p.orbitR += p.drift * dt * p.life;
+
+                const x = cx + Math.cos(p.angle) * p.orbitR;
+                const y = cy + Math.sin(p.angle) * p.orbitR;
+                const alpha = Math.min(1, p.life * 2);
+
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate(p.rotation);
+
+                // Draw hexagonal crystal shard
+                ctx.beginPath();
+                for (let s = 0; s < 6; s++) {
+                    const a = (s / 6) * Math.PI * 2;
+                    s === 0 ? ctx.moveTo(Math.cos(a) * p.size, Math.sin(a) * p.size)
+                            : ctx.lineTo(Math.cos(a) * p.size, Math.sin(a) * p.size);
+                }
+                ctx.closePath();
+
+                const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, p.size);
+                grad.addColorStop(0, `rgba(224, 242, 254, ${alpha * 0.95})`);
+                grad.addColorStop(0.5, `rgba(125, 211, 252, ${alpha * 0.7})`);
+                grad.addColorStop(1, `rgba(56, 189, 248, ${alpha * 0.3})`);
+                ctx.fillStyle = grad;
+                ctx.shadowBlur = 6;
+                ctx.shadowColor = '#bae6fd';
+                ctx.fill();
+
+                ctx.restore();
+            }
+            ctx.globalCompositeOperation = 'source-over';
+        }
+    }
+
+    /* ─── TOXIC AURA (Radioactive Green Vapor) ────────────────────────── */
+    class ToxicAura extends LocalAura {
+        tick(dt) {
+            if (this.width < 10 || this.height < 10) return;
+            const ctx = this.ctx;
+            ctx.fillStyle = 'rgba(0,0,0,0.18)';
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.fillRect(0, 0, this.width, this.height);
+            ctx.globalCompositeOperation = 'screen';
+
+            this.timer += dt;
+            const cx = this.width / 2;
+            const cy = this.height / 2;
+            const avatarRadius = (this.width - 40) / 2;
+
+            // Spawn toxic bubbles rising from the bottom arc
+            if (Math.random() < 0.55) {
+                const angle = Math.PI * 0.1 + Math.random() * Math.PI * 0.8;
+                const spawnR = avatarRadius * (0.9 + Math.random() * 0.2);
+                this.particles.push({
+                    x: cx + Math.cos(angle) * spawnR,
+                    y: cy + Math.sin(angle) * spawnR,
+                    vx: (Math.random() - 0.5) * 12,
+                    vy: -(20 + Math.random() * 35),
+                    size: (avatarRadius * 0.2) + Math.random() * (avatarRadius * 0.25),
+                    life: 1.0,
+                    decay: 0.5 + Math.random() * 0.7,
+                    wobble: Math.random() * Math.PI * 2,
+                    wobbleSpeed: 2 + Math.random() * 3
+                });
+            }
+
+            for (let i = this.particles.length - 1; i >= 0; i--) {
+                const p = this.particles[i];
+                p.life -= p.decay * dt;
+                if (p.life <= 0) { this.particles.splice(i, 1); continue; }
+
+                p.wobble += p.wobbleSpeed * dt;
+                p.x += (p.vx + Math.sin(p.wobble) * 10) * dt;
+                p.y += p.vy * dt;
+
+                const currentSize = p.size * (0.4 + p.life * 0.6);
+                if (currentSize <= 0) continue;
+
+                const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, currentSize);
+                if (p.life > 0.6) {
+                    grad.addColorStop(0, `rgba(217, 255, 0, ${p.life * 0.7})`);
+                    grad.addColorStop(0.4, `rgba(132, 204, 22, ${p.life * 0.6})`);
+                    grad.addColorStop(1, `rgba(77, 124, 15, 0)`);
+                } else if (p.life > 0.25) {
+                    grad.addColorStop(0, `rgba(132, 204, 22, ${p.life * 0.6})`);
+                    grad.addColorStop(0.6, `rgba(54, 83, 20, ${p.life * 0.4})`);
+                    grad.addColorStop(1, `rgba(20, 40, 5, 0)`);
+                } else {
+                    grad.addColorStop(0, `rgba(77, 124, 15, ${p.life * 0.4})`);
+                    grad.addColorStop(1, `rgba(10, 20, 0, 0)`);
+                }
+
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, currentSize, 0, Math.PI * 2);
+                ctx.fillStyle = grad;
+                ctx.fill();
+
+                // Occasional drip particle
+                if (Math.random() < 0.05 * p.life) {
+                    ctx.beginPath();
+                    ctx.arc(p.x + (Math.random() - 0.5) * currentSize, p.y + currentSize * 0.5, 1.5, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(166, 255, 0, ${p.life * 0.8})`;
+                    ctx.fill();
+                }
+            }
+            ctx.globalCompositeOperation = 'source-over';
+        }
+    }
+
+    /* ─── GALAXY AURA (Rotating Nebula + Stars) ───────────────────────── */
+    class GalaxyAura extends LocalAura {
+        tick(dt) {
+            if (this.width < 10 || this.height < 10) return;
+            const ctx = this.ctx;
+            ctx.fillStyle = 'rgba(0,0,0,0.12)';
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.fillRect(0, 0, this.width, this.height);
+            ctx.globalCompositeOperation = 'screen';
+
+            this.timer += dt;
+            const cx = this.width / 2;
+            const cy = this.height / 2;
+            const avatarRadius = (this.width - 40) / 2;
+
+            // Spawn stars and nebula wisps
+            if (this.particles.length < 55 && Math.random() < 0.7) {
+                const angle = Math.random() * Math.PI * 2;
+                const dist = avatarRadius * (0.85 + Math.random() * 0.45);
+                const isNebula = Math.random() < 0.3;
+                this.particles.push({
+                    angle,
+                    dist,
+                    orbitSpeed: (0.3 + Math.random() * 0.8) * (Math.random() < 0.5 ? 1 : -1),
+                    size: isNebula ? 6 + Math.random() * 10 : 0.8 + Math.random() * 2,
+                    life: 1.0,
+                    decay: 0.2 + Math.random() * 0.4,
+                    isNebula,
+                    colorIdx: Math.floor(Math.random() * 4),
+                    twinkle: Math.random() * Math.PI * 2,
+                    twinkleSpeed: 3 + Math.random() * 5
+                });
+            }
+
+            const nebulaColors = [
+                [139, 92, 246],   // violet
+                [99, 102, 241],   // indigo
+                [59, 130, 246],   // blue
+                [236, 72, 153]    // pink
+            ];
+
+            for (let i = this.particles.length - 1; i >= 0; i--) {
+                const p = this.particles[i];
+                p.life -= p.decay * dt;
+                if (p.life <= 0) { this.particles.splice(i, 1); continue; }
+
+                p.angle += p.orbitSpeed * dt;
+                p.twinkle += p.twinkleSpeed * dt;
+
+                const x = cx + Math.cos(p.angle) * p.dist;
+                const y = cy + Math.sin(p.angle) * p.dist;
+                const twinkleFactor = 0.5 + 0.5 * Math.sin(p.twinkle);
+                const alpha = p.life * twinkleFactor;
+
+                if (p.isNebula) {
+                    const [r, g, b] = nebulaColors[p.colorIdx];
+                    const grad = ctx.createRadialGradient(x, y, 0, x, y, p.size);
+                    grad.addColorStop(0, `rgba(${r},${g},${b},${alpha * 0.4})`);
+                    grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
+                    ctx.beginPath();
+                    ctx.arc(x, y, p.size, 0, Math.PI * 2);
+                    ctx.fillStyle = grad;
+                    ctx.fill();
+                } else {
+                    // Star
+                    ctx.beginPath();
+                    ctx.arc(x, y, p.size * twinkleFactor, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.9})`;
+                    ctx.shadowBlur = p.size * 3;
+                    ctx.shadowColor = `rgba(167, 139, 250, ${alpha})`;
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                }
+            }
+
+            // Galactic core glow
+            const coreGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, avatarRadius * 0.6);
+            coreGrad.addColorStop(0, `rgba(196, 181, 253, ${0.08 + Math.sin(this.timer * 1.5) * 0.03})`);
+            coreGrad.addColorStop(1, 'rgba(139, 92, 246, 0)');
+            ctx.beginPath();
+            ctx.arc(cx, cy, avatarRadius * 0.6, 0, Math.PI * 2);
+            ctx.fillStyle = coreGrad;
+            ctx.fill();
+
+            ctx.globalCompositeOperation = 'source-over';
+        }
+    }
+
+    /* ─── BLOOD AURA (Falling Crimson Drops) ─────────────────────────── */
+    class BloodAura extends LocalAura {
+        tick(dt) {
+            if (this.width < 10 || this.height < 10) return;
+            const ctx = this.ctx;
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.fillRect(0, 0, this.width, this.height);
+            ctx.globalCompositeOperation = 'screen';
+
+            this.timer += dt;
+            const cx = this.width / 2;
+            const cy = this.height / 2;
+            const avatarRadius = (this.width - 40) / 2;
+
+            // Spawn drips from top arc
+            if (Math.random() < 0.35) {
+                const angle = Math.PI * 1.1 + Math.random() * Math.PI * 0.8;
+                const spawnR = avatarRadius * (0.9 + Math.random() * 0.15);
+                this.particles.push({
+                    x: cx + Math.cos(angle) * spawnR,
+                    y: cy + Math.sin(angle) * spawnR,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: 25 + Math.random() * 50,
+                    size: 2 + Math.random() * 4,
+                    elongation: 1 + Math.random() * 2.5,
+                    life: 1.0,
+                    decay: 0.6 + Math.random() * 0.8
+                });
+            }
+
+            for (let i = this.particles.length - 1; i >= 0; i--) {
+                const p = this.particles[i];
+                p.life -= p.decay * dt;
+                if (p.life <= 0) { this.particles.splice(i, 1); continue; }
+
+                p.vy += 60 * dt; // gravity acceleration
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+
+                const alpha = Math.min(1, p.life * 1.8);
+                const dropH = p.size * p.elongation * (0.5 + p.life * 0.5);
+                const dropW = p.size * (0.3 + p.life * 0.7);
+
+                ctx.save();
+                ctx.translate(p.x, p.y);
+
+                // Teardrop shape
+                ctx.beginPath();
+                ctx.ellipse(0, 0, dropW, dropH, 0, 0, Math.PI * 2);
+
+                const grad = ctx.createRadialGradient(0, -dropH * 0.2, 0, 0, 0, dropH);
+                grad.addColorStop(0, `rgba(255, 50, 50, ${alpha * 0.9})`);
+                grad.addColorStop(0.5, `rgba(180, 0, 0, ${alpha * 0.7})`);
+                grad.addColorStop(1, `rgba(80, 0, 0, 0)`);
+                ctx.fillStyle = grad;
+                ctx.shadowBlur = 5;
+                ctx.shadowColor = '#b91c1c';
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                ctx.restore();
+            }
+
+            // Deep crimson edge glow
+            const edgeGrad = ctx.createRadialGradient(cx, cy, avatarRadius * 0.85, cx, cy, avatarRadius * 1.2);
+            edgeGrad.addColorStop(0, 'rgba(185, 28, 28, 0)');
+            edgeGrad.addColorStop(0.5, `rgba(185, 28, 28, ${0.12 + Math.sin(this.timer * 2) * 0.04})`);
+            edgeGrad.addColorStop(1, 'rgba(127, 29, 29, 0)');
+            ctx.beginPath();
+            ctx.arc(cx, cy, avatarRadius * 1.2, 0, Math.PI * 2);
+            ctx.fillStyle = edgeGrad;
+            ctx.fill();
+
+            ctx.globalCompositeOperation = 'source-over';
+        }
+    }
+
     /* ─── Setup and Orchestration ────────────────────────────────────── */
     function attachAuras() {
         const attachToClass = (cls, AuraClass) => {
@@ -434,10 +757,14 @@
             });
         };
 
-        attachToClass('aura-fire', FireAura);
-        attachToClass('aura-storm', StormAura);
-        attachToClass('aura-void', VoidAura);
-        attachToClass('aura-flare', FlareAura);
+        attachToClass('aura-fire',   FireAura);
+        attachToClass('aura-storm',  StormAura);
+        attachToClass('aura-void',   VoidAura);
+        attachToClass('aura-flare',  FlareAura);
+        attachToClass('aura-ice',    IceAura);
+        attachToClass('aura-toxic',  ToxicAura);
+        attachToClass('aura-galaxy', GalaxyAura);
+        attachToClass('aura-blood',  BloodAura);
     }
 
     function init() {
