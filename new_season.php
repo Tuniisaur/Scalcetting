@@ -19,10 +19,10 @@ if (!isset($_SESSION['user_id'])) {
 $db   = new Database();
 $conn = $db->getConnection();
 
-$stmt = $conn->prepare("SELECT role FROM giocatori WHERE id = ?");
+$stmt = $conn->prepare("SELECT is_admin FROM giocatori WHERE id = ?");
 $stmt->execute([$_SESSION['user_id']]);
-$role = $stmt->fetchColumn();
-if ($role !== 'admin') {
+$isAdmin = (int)$stmt->fetchColumn();
+if ($isAdmin !== 1) {
     http_response_code(403);
     die("Accesso negato. Solo gli admin possono eseguire questo script.");
 }
@@ -103,6 +103,18 @@ $errors = [];
 
 try {
     $conn->beginTransaction();
+
+    // 0. Auto-migrazione: garantisce la presenza delle colonne description e icon
+    $stmtCols = $conn->query("SHOW COLUMNS FROM season_pass_rewards");
+    $columns = $stmtCols->fetchAll(PDO::FETCH_COLUMN);
+    if (!in_array('description', $columns)) {
+        $conn->exec("ALTER TABLE season_pass_rewards ADD COLUMN description VARCHAR(255) DEFAULT NULL");
+        $log[] = "🔧 Colonna 'description' mancante creata automaticamente.";
+    }
+    if (!in_array('icon', $columns)) {
+        $conn->exec("ALTER TABLE season_pass_rewards ADD COLUMN icon VARCHAR(100) DEFAULT NULL");
+        $log[] = "🔧 Colonna 'icon' mancante creata automaticamente.";
+    }
 
     // 1. Garantisce che gli shop_items estetici esistano
     $insertedItems = 0;
